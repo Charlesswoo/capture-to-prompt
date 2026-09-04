@@ -35,6 +35,9 @@ struct CaptureToPromptApp: App {
         // 콘텐츠 최소 크기(800×480) 아래로 창 축소 금지
         .windowResizability(.contentMinSize)
         .commands {
+            CommandGroup(after: .appInfo) {
+                Button("업데이트 확인…") { appState.checkForUpdatesNow() }
+            }
             CommandGroup(after: .newItem) {
                 Button("새 캡처") { appState.startNewCapture() }
                     .keyboardShortcut("n")
@@ -60,6 +63,7 @@ struct CaptureToPromptApp: App {
 
         Settings {
             SettingsView()
+                .environmentObject(appState)
         }
 
         MenuBarExtra("CaptureToPrompt", systemImage: "camera.viewfinder") {

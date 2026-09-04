@@ -598,42 +598,4 @@ final class AppStateTests: XCTestCase {
         appState.finishAnalysis(second)
         XCTAssertEqual(appState.runningAnalysisCount, 1)
     }
-
-    // MARK: - 포즈 검증·수정 (모델이 다르게 적었을 때 고칠 수 있어야 한다)
-
-    func testApplyEditedPoseUpdatesAnalysisAndHistory() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
-        appState.show(item)
-
-        appState.applyEditedPose("정면 상반신, 양팔을 내린 차렷 자세")
-
-        XCTAssertEqual(appState.analysis?.breakdown.pose, "정면 상반신, 양팔을 내린 차렷 자세")
-        XCTAssertEqual(store.items.first?.analysis.breakdown.pose,
-                       "정면 상반신, 양팔을 내린 차렷 자세")
-        // 다른 메타는 그대로
-        XCTAssertEqual(appState.analysis?.breakdown.subject, "cat")
-        XCTAssertEqual(appState.analysis?.promptKo, "고양이")
-    }
-
-    /// 프롬프트 편집과 같은 방어 — 화면이 낡아도 저장소의 최신을 기준으로 pose만 갈아끼운다.
-    func testApplyEditedPoseDoesNotRevertEarlierPromptEdit() throws {
-        let stale = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                              fileExtension: "png")
-        appState.show(stale)
-        appState.applyEditedPrompt("수정한 한국어", for: .korean)
-
-        appState.show(stale)                 // 옛 스냅샷으로 재진입
-        appState.applyEditedPose("옆모습 전신")
-
-        let saved = try XCTUnwrap(store.items.first?.analysis)
-        XCTAssertEqual(saved.breakdown.pose, "옆모습 전신")
-        XCTAssertEqual(saved.promptKo, "수정한 한국어", "앞서 수정한 프롬프트가 되돌아감")
-    }
-
-    /// 분석이 없으면 아무 일도 하지 않는다.
-    func testApplyEditedPoseWithoutAnalysisIsNoOp() {
-        appState.applyEditedPose("무언가")
-        XCTAssertNil(appState.analysis)
-    }
 }

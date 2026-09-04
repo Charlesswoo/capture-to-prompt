@@ -10,18 +10,6 @@ struct ResultPane: View {
     /// 생성본 전체 삭제는 되돌릴 수 없으므로 한 번 확인한다.
     @State private var confirmDeleteAll = false
     @State private var editingText = ""
-    /// 편집 중인 대상 — 프롬프트(현재 언어 탭) 또는 포즈 서술.
-    @State private var editTarget: EditTarget = .prompt
-
-    enum EditTarget {
-        case prompt, pose
-        var title: String {
-            switch self {
-            case .prompt: return "프롬프트"
-            case .pose: return "포즈"
-            }
-        }
-    }
     /// 메타(breakdown)는 기본 접힘 — 프롬프트 중심 화면. 펼침 상태는 기억한다.
     @AppStorage("showBreakdown") private var showBreakdown = false
 
@@ -146,9 +134,7 @@ struct ResultPane: View {
         }
         // 탭 전환·새 분석 도착 시 편집 중이던 내용은 버린다 (다른 탭에 잘못 저장 방지).
         // 포즈는 언어 탭과 무관하므로 탭을 바꿔도 편집을 유지한다.
-        .onChange(of: selectedTab) { _, _ in
-            if editTarget == .prompt { isEditingPrompt = false }
-        }
+        .onChange(of: selectedTab) { _, _ in isEditingPrompt = false }
         .onChange(of: appState.analysis) { _, _ in isEditingPrompt = false }
     }
 
@@ -156,9 +142,7 @@ struct ResultPane: View {
     private var promptEditor: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(editTarget == .pose
-                     ? "포즈 수정 — 왼쪽 이미지와 대조해 고치세요"
-                     : "프롬프트 수정 — \(selectedTab.rawValue)")
+                Text("프롬프트 수정 — \(selectedTab.rawValue)")
                     .font(.headline)
                 Spacer()
                 Button("취소") { isEditingPrompt = false }
@@ -183,8 +167,9 @@ struct ResultPane: View {
         .padding()
     }
 
-    /// 포즈는 메타의 한 항목이지만, 왼쪽 원본 이미지와 눈으로 대조해야 하는 정보라
-    /// 메타를 접어도 이 줄만은 남긴다 (모델이 다르게 적었을 때 알아챌 수 있도록).
+    /// 포즈는 프롬프트 본문에 이미 녹아 있는 내용을 따로 뽑아 보여주는 **대조용 요약**이다.
+    /// (프롬프트 1000자를 이미지와 맞춰보긴 어려우므로) 메타를 접어도 이 줄만은 남긴다.
+    /// 고칠 때는 프롬프트를 고쳐야 한다 — 생성에 쓰이는 건 프롬프트 문장이기 때문.
     private func poseSection(_ pose: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -193,16 +178,6 @@ struct ResultPane: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button {
-                    editingText = pose
-                    editTarget = .pose
-                    isEditingPrompt = true
-                } label: {
-                    Image(systemName: "pencil")
-                }
-                .buttonStyle(.glass)
-                .controlSize(.small)
-                .help("왼쪽 이미지와 다르면 고치세요 — 저장하면 히스토리에도 반영됩니다")
-                Button {
                     copy(pose)
                 } label: {
                     Image(systemName: "doc.on.doc")
@@ -210,6 +185,7 @@ struct ResultPane: View {
                 .buttonStyle(.glass)
                 .controlSize(.small)
                 .help("포즈 서술을 복사합니다")
+                    .accessibilityHint("생성에는 위 프롬프트가 쓰입니다")
             }
             Text(pose)
                 .font(.callout)
@@ -265,7 +241,6 @@ struct ResultPane: View {
                             if selectedTab.editableLanguage != nil {
                                 Button {
                                     editingText = text(for: analysis)
-                                    editTarget = .prompt
                                     isEditingPrompt = true
                                 } label: {
                                     Image(systemName: "pencil")
@@ -314,13 +289,8 @@ struct ResultPane: View {
 
     /// 편집 내용을 현재 분석·히스토리에 반영한다.
     private func commitPromptEdit() {
-        switch editTarget {
-        case .pose:
-            appState.applyEditedPose(editingText)
-        case .prompt:
-            if let language = selectedTab.editableLanguage {
-                appState.applyEditedPrompt(editingText, for: language)
-            }
+        if let language = selectedTab.editableLanguage {
+            appState.applyEditedPrompt(editingText, for: language)
         }
         isEditingPrompt = false
     }
@@ -485,7 +455,7 @@ struct ResultPane: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("구조 분석(주제·스타일·태그 등)을 펼치거나 접습니다")
+                .help("이 프롬프트가 어떻게 구성됐는지 보여주는 참고 정보입니다 — 이미지 생성에는 위 프롬프트 문장이 쓰입니다")
                 Spacer()
                 if showBreakdown {
                     Button {

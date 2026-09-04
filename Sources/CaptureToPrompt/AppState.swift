@@ -33,6 +33,57 @@ final class AppState: ObservableObject {
     /// 개선안 시트 표시 여부.
     @Published var showingRevision = false
 
+    // MARK: - 자동 업데이트 (확인 자동 / 설치 수동)
+
+    /// 새 버전이 있으면 여기에 담긴다 — 배너로 알리고, 설치는 사용자가 누를 때만.
+    @Published private(set) var availableUpdate: UpdateChecker.Release?
+    @Published private(set) var isInstallingUpdate = false
+    @AppStorage("checkForUpdatesOnLaunch") var checkForUpdatesOnLaunch = true
+
+    var currentAppVersion: String { UpdateChecker.currentVersion }
+
+    /// 앱 시작 시 조용히 확인한다 (실패해도 화면에 오류를 띄우지 않는다 —
+    /// 네트워크가 없다고 사용법이 막히면 안 되므로).
+    func checkForUpdatesInBackground() {
+        guard checkForUpdatesOnLaunch else { return }
+        Task {
+            availableUpdate = try? await UpdateChecker.checkForUpdate()
+        }
+    }
+
+    /// 메뉴에서 직접 확인 — 결과를 반드시 알려준다 (최신이면 최신이라고).
+    func checkForUpdatesNow() {
+        Task {
+            do {
+                if let release = try await UpdateChecker.checkForUpdate() {
+                    availableUpdate = release
+                } else {
+                    availableUpdate = nil
+                    errorMessage = "최신 버전을 쓰고 계십니다 (\(currentAppVersion))."
+                }
+            } catch {
+                errorMessage = "업데이트 확인 실패: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// 새 버전을 내려받아 교체하고 앱을 다시 연다.
+    func installAvailableUpdate() {
+        guard let release = availableUpdate, !isInstallingUpdate else { return }
+        isInstallingUpdate = true
+        Task {
+            do {
+                let newApp = try await UpdateInstaller.downloadAndUnpack(from: release.downloadURL)
+                try UpdateInstaller.replaceAndRelaunch(newApp: newApp)  // 여기서 앱이 종료된다
+            } catch {
+                isInstallingUpdate = false
+                errorMessage = "업데이트 설치 실패: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func dismissUpdate() { availableUpdate = nil }
+
     /// 정책에 걸린 생성 시도의 기록.
     struct PolicyRejection: Equatable {
         var prompt: String                          // 거부된 프롬프트 원문
@@ -678,20 +729,6 @@ final class AppState: ObservableObject {
             return
         }
         let updated = stored.updating(prompt: prompt, for: language)
-        history.update(id: id, analysis: updated)
-        self.analysis = updated
-    }
-
-    /// 사용자가 고친 포즈 서술을 반영한다.
-    /// 프롬프트 편집과 같은 이유로 저장소의 최신 분석을 기준으로 pose만 갈아끼운다.
-    func applyEditedPose(_ pose: String) {
-        guard let analysis else { return }
-        guard let id = currentHistoryID,
-              let stored = history.items.first(where: { $0.id == id })?.analysis else {
-            self.analysis = analysis.updating(pose: pose)
-            return
-        }
-        let updated = stored.updating(pose: pose)
         history.update(id: id, analysis: updated)
         self.analysis = updated
     }

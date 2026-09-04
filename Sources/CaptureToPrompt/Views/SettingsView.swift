@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @EnvironmentObject var appState: AppState
     @AppStorage("backend") private var backend = AppState.Backend.claudeCLI.rawValue
     @AppStorage("apiKey") private var apiKey = ""
     @AppStorage("model") private var model = PromptAnalyzer.defaultModel
@@ -180,6 +181,22 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            Section("업데이트") {
+                Toggle("시작할 때 새 버전 확인", isOn: $appState.checkForUpdatesOnLaunch)
+                HStack {
+                    Text("현재 버전")
+                    Spacer()
+                    Text(appState.currentAppVersion)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                Button("지금 확인") { appState.checkForUpdatesNow() }
+                Text("새 버전이 있으면 화면 아래에 알려드립니다. 내려받아 교체하는 것은 "
+                     + "직접 누르실 때만 실행됩니다.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

@@ -74,13 +74,6 @@ struct PromptAnalysis: Codable, Equatable {
         }
     }
 
-    /// 포즈 서술만 교체한 사본을 돌려준다 (모델이 잘못 적었을 때 사용자가 고친다).
-    func updating(pose: String) -> PromptAnalysis {
-        var copy = self
-        copy.breakdown.pose = pose
-        return copy
-    }
-
     /// 지정 언어의 프롬프트만 교체한 사본을 돌려준다.
     func updating(prompt: String, for language: PromptLanguage) -> PromptAnalysis {
         var copy = self

@@ -108,6 +108,7 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 800, minHeight: 480)
+        .task { appState.checkForUpdatesInBackground() }
     }
 
     // MARK: - 왼쪽: 이미지 영역
@@ -203,6 +204,9 @@ struct ContentView: View {
                 emptyState
             }
 
+            if let update = appState.availableUpdate {
+                updateBanner(update)
+            }
             if let error = appState.visibleErrorMessage {
                 errorBanner(error)
             }
@@ -329,6 +333,59 @@ struct ContentView: View {
             }
             .padding(12)
             .allowsHitTesting(false)
+    }
+
+    /// 새 버전 알림 — 확인은 자동, 설치는 이 버튼을 누를 때만.
+    private func updateBanner(_ update: UpdateChecker.Release) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "arrow.down.circle.fill")
+                .foregroundStyle(.blue)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("새 버전 \(update.version.description)이 있습니다 "
+                     + "(현재 \(appState.currentAppVersion))")
+                    .font(.callout.weight(.medium))
+                if !update.notes.isEmpty {
+                    Text(update.notes)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            Spacer(minLength: 0)
+            Button {
+                appState.installAvailableUpdate()
+            } label: {
+                if appState.isInstallingUpdate {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text("설치 중…")
+                    }
+                } else {
+                    Text("설치하고 다시 열기")
+                }
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.small)
+            .disabled(appState.isInstallingUpdate)
+            .help("새 버전을 내려받아 교체하고 앱을 다시 엽니다 (약 \(updateSizeText(update)))")
+            Button {
+                appState.dismissUpdate()
+            } label: {
+                Image(systemName: "xmark")
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .disabled(appState.isInstallingUpdate)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glassEffect(.regular.tint(.blue.opacity(0.12)), in: .rect(cornerRadius: 12))
+        .padding([.horizontal, .bottom], 14)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private func updateSizeText(_ update: UpdateChecker.Release) -> String {
+        ByteCountFormatter.string(fromByteCount: update.byteSize, countStyle: .file)
     }
 
     private func errorBanner(_ message: String) -> some View {
