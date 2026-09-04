@@ -1,0 +1,121 @@
+/* CaptureToPrompt — English localization (keys are the Korean source literals) */
+
+/* ContentView */
+"창 캡처" = "Capture Window";
+"새 캡처" = "New Capture";
+"현재 결과를 닫고 시작 화면으로 돌아갑니다 (⌘N)" = "Closes the current result and returns to the start screen (⌘N)";
+"창 선택" = "Pick Window";
+"영역 캡처" = "Capture Area";
+"클립보드" = "Clipboard";
+"파일 열기" = "Open File";
+"놓아서 분석" = "Drop to Analyze";
+"이미지에서 프롬프트 만들기" = "Turn Images into Prompts";
+"이미지를 드래그하거나, 아래 버튼으로 시작하세요" = "Drag an image here, or start with a button below";
+"원본 이미지를 찾을 수 없습니다" = "Original image not found";
+"어느 앱에서든 %@ 를 누르면 마우스 아래 창을 바로 분석합니다" = "Press %@ in any app to analyze the window under your mouse";
+"마우스 아래 창을 자동 인식해 캡처·분석합니다 (⌘1, 전역 %@)" = "Auto-detects and captures the window under your mouse (⌘1, global %@)";
+"열린 창 그리드에서 클릭해 캡처·분석합니다 (⌘2)" = "Pick a window from the grid to capture and analyze (⌘2)";
+"화면 영역을 직접 선택해 캡처하고 분석합니다 (⌘3)" = "Select a screen area to capture and analyze (⌘3)";
+"클립보드의 이미지를 분석합니다 (⌘⇧V)" = "Analyze the image on the clipboard (⌘⇧V)";
+"이미지 파일을 선택해 분석합니다 (⌘O)" = "Choose an image file to analyze (⌘O)";
+
+/* ResultPane */
+"분석 결과 없음" = "No Analysis Yet";
+"이미지를 분석하면 3개 언어 프롬프트와 구조 분석이 여기에 표시됩니다" = "Analyze an image to see prompts in three languages and a structured breakdown here";
+"%@가 이미지를 분석 중입니다…" = "%@ is analyzing the image…";
+"새 분석 진행 중 — 완료되면 이 화면이 새 결과로 바뀝니다" = "New analysis in progress — this view will switch to the new result when done";
+"경과 %lld초 · 보통 30~60초 걸립니다" = "%lld s elapsed · usually takes 30–60 s";
+"프롬프트" = "Prompt";
+"현재 탭 내용을 복사합니다 (⌘⇧C)" = "Copy the current tab (⌘⇧C)";
+"메타" = "Breakdown";
+"메타 전체 복사" = "Copy full breakdown";
+"구조 분석(주제·스타일·태그 등)을 펼치거나 접습니다" = "Expand or collapse the breakdown (subject, style, tags, etc.)";
+"주제" = "Subject";
+"스타일" = "Style";
+"구성" = "Composition";
+"조명" = "Lighting";
+"색감" = "Colors";
+"분위기" = "Mood";
+"매체" = "Medium";
+"클릭해서 태그 복사" = "Click to copy tag";
+"\"%@\" 복사" = "Copy \"%@\"";
+"복사됨" = "Copied";
+"이미지 생성" = "Generate Image";
+"원본" = "Original";
+"생성" = "Generated";
+"생성된 이미지를 복사합니다" = "Copies the generated image";
+"생성된 이미지를 PNG로 저장합니다" = "Saves the generated image as PNG";
+"다시 생성" = "Regenerate";
+"생성 중…" = "Generating…";
+"이미지 생성 중…" = "Generating Image…";
+"경과 %lld초 · 보통 1분 정도 걸립니다" = "%lld s elapsed · usually takes about a minute";
+"복사" = "Copy";
+"저장…" = "Save…";
+"영문 프롬프트로 이미지를 생성합니다 (설정의 이미지 생성 API 사용)" = "Generates an image from the English prompt (uses the image generation engine from Settings)";
+"캡처 완료 — 분석 대기 중" = "Captured — Waiting to Analyze";
+"왼쪽 이미지를 확인한 뒤 분석을 시작하세요" = "Review the image on the left, then start the analysis";
+"분석 시작" = "Start Analysis";
+"대기 중인 캡처 이미지를 분석합니다 (⌘↩)" = "Analyzes the pending captured image (⌘↩)";
+"프롬프트 수정 — 저장하면 이미지 생성·히스토리에도 반영됩니다" = "Edit the prompt — saving also updates image generation and history";
+"취소" = "Cancel";
+"저장" = "Save";
+"프롬프트 수정 — %@" = "Edit Prompt — %@";
+"변경을 버리고 돌아갑니다 (Esc)" = "Discard changes and go back (Esc)";
+"수정본을 저장합니다 — 이미지 생성·히스토리에도 반영 (⌘S)" = "Saves the edit — also applied to image generation and history (⌘S)";
+
+/* HistorySidebar */
+"히스토리" = "History";
+"히스토리 · %lld" = "History · %lld";
+"히스토리 없음" = "No History";
+"분석한 이미지가 여기에 쌓입니다" = "Analyzed images will appear here";
+"프롬프트 복사 (한국어)" = "Copy Prompt (Korean)";
+"삭제" = "Delete";
+
+/* WindowPickerSheet */
+"캡처할 창을 선택하세요" = "Choose a window to capture";
+"창 목록 새로고침" = "Refresh window list";
+"다른 앱 창을 연 뒤 새로고침하세요" = "Open another app's window, then refresh";
+
+/* Menu bar extra & commands */
+"마우스 아래 창 캡처 → 프롬프트  (%@)" = "Capture Window Under Mouse → Prompt  (%@)";
+"창 선택 캡처 → 프롬프트" = "Pick Window → Prompt";
+"영역 선택 캡처 → 프롬프트" = "Capture Area → Prompt";
+"클립보드 이미지 분석" = "Analyze Clipboard Image";
+"창 열기" = "Open Window";
+"종료" = "Quit";
+"이미지 파일 열기…" = "Open Image File…";
+"캡처" = "Capture";
+"마우스 아래 창 캡처" = "Capture Window Under Mouse";
+"창 선택 캡처" = "Pick Window to Capture";
+"영역 선택 캡처" = "Capture Screen Area";
+"전역 단축키: %@ — 어느 앱에서든 동작" = "Global hotkey: %@ — works in any app";
+
+/* SettingsView */
+"배경 투명도" = "Background Opacity";
+"왼쪽으로 갈수록 유리처럼 투명해집니다. 메인 창에 바로 반영됩니다." = "Slide left for a glassier, more transparent window. Applies immediately.";
+"전역 캡처 단축키" = "Global Capture Hotkey";
+"어느 앱에 있든 이 키를 누르면 마우스 커서 아래 창을 자동 인식해 캡처·분석합니다." = "Press this key in any app to auto-detect, capture, and analyze the window under your cursor.";
+"캡처 후 자동 분석" = "Analyze Automatically After Capture";
+"끄면 캡처한 이미지를 먼저 확인한 뒤 '분석 시작' 버튼(⌘↩)으로 분석합니다. 파일 열기·클립보드는 항상 바로 분석합니다." = "When off, review the captured image first and start analysis with the Start Analysis button (⌘↩). Open File and Clipboard always analyze immediately.";
+"백엔드" = "Backend";
+"Claude Code CLI (키 불필요)" = "Claude Code CLI (no key needed)";
+"Codex CLI (키 불필요)" = "Codex CLI (no key needed)";
+"Anthropic API 키" = "Anthropic API Key";
+"LLM Router (OpenAI 호환)" = "LLM Router (OpenAI-compatible)";
+"claude 경로 (비우면 자동 탐색)" = "claude path (leave empty to auto-detect)";
+"claude CLI 감지됨: %@ — 구독 로그인을 그대로 사용합니다." = "claude CLI detected: %@ — uses your subscription login.";
+"claude CLI를 찾을 수 없습니다. 설치되어 있다면 위에 경로를 입력하세요 (터미널에서 which claude). Claude Code가 없는 PC라면 위에서 다른 백엔드를 선택하세요." = "claude CLI not found. If it is installed, enter its path above (run `which claude` in Terminal). If Claude Code isn't installed on this Mac, choose another backend above.";
+"지정한 경로를 실행할 수 없습니다. 터미널에서 which claude 로 확인하세요." = "The specified path is not executable. Check with `which claude` in Terminal.";
+"codex CLI 감지됨: %@ — ChatGPT 로그인을 그대로 사용합니다." = "codex CLI detected: %@ — uses your ChatGPT login.";
+"codex CLI를 찾을 수 없습니다. brew install codex 또는 npm i -g @openai/codex 후 로그인하세요." = "codex CLI not found. Install with `brew install codex` or `npm i -g @openai/codex`, then log in.";
+"비워두면 ANTHROPIC_API_KEY 환경변수를 사용합니다." = "Leave empty to use the ANTHROPIC_API_KEY environment variable.";
+"모델" = "Model";
+"기본값 claude-opus-4-8 — 가장 정확한 분석. 비용을 아끼려면 haiku를 선택하세요." = "Default claude-opus-4-8 — most accurate analysis. Choose haiku to save cost.";
+"LLM Router API 키" = "LLM Router API Key";
+"비워두면 LLM_ROUTER_API_KEY 환경변수를 사용합니다." = "Leave empty to use the LLM_ROUTER_API_KEY environment variable.";
+"auto = 자동 라우팅. auto:cost / auto:speed / auto:quality 라우팅 목표나 특정 모델 id도 지정할 수 있습니다." = "auto = automatic routing. You can also set a routing goal (auto:cost / auto:speed / auto:quality) or a specific model id.";
+"엔진" = "Engine";
+"OpenAI 호환 API (키)" = "OpenAI-compatible API (key)";
+"codex CLI 감지됨 — ChatGPT 구독으로 이미지를 생성합니다." = "codex CLI detected — generates images with your ChatGPT subscription.";
+"API 키" = "API Key";
+"OpenAI 호환 Images API — 키를 비우면 OPENAI_API_KEY 환경변수를 사용합니다." = "OpenAI-compatible Images API — leave the key empty to use the OPENAI_API_KEY environment variable.";
