@@ -42,24 +42,52 @@ final class AppState: ObservableObject {
 
     var currentAppVersion: String { UpdateChecker.currentVersion }
 
-    /// 앱 시작 시 조용히 확인한다 (실패해도 화면에 오류를 띄우지 않는다 —
-    /// 네트워크가 없다고 사용법이 막히면 안 되므로).
-    func checkForUpdatesInBackground() {
+    /// "최신 버전입니다" 같은 안내 — 오류가 아니므로 오류 배너와 분리한다.
+    @Published var updateNotice: String?
+    private var lastUpdateCheck: Date?
+    private var periodicCheckTask: Task<Void, Never>?
+
+    /// 조용히 확인한다 (실패해도 화면에 오류를 띄우지 않는다 —
+    /// 네트워크가 없다고 사용이 막히면 안 되므로).
+    /// 이미 알림이 떠 있거나 확인 간격이 안 지났으면 건너뛴다.
+    func checkForUpdatesInBackground(force: Bool = false) {
         guard checkForUpdatesOnLaunch else { return }
+        guard availableUpdate == nil else { return }
+        guard force || UpdateChecker.shouldCheck(lastCheck: lastUpdateCheck) else { return }
+        lastUpdateCheck = Date()
         Task {
             availableUpdate = try? await UpdateChecker.checkForUpdate()
         }
     }
 
+    /// 앱이 켜져 있는 동안 주기적으로 확인한다 (시작 시 1회 + 이후 1시간마다).
+    /// 창이 다시 활성화될 때도 확인하지만, 간격이 지나지 않았으면 조회하지 않는다.
+    func startPeriodicUpdateChecks() {
+        guard periodicCheckTask == nil else { return }
+        checkForUpdatesInBackground(force: true)
+        periodicCheckTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(UpdateChecker.checkInterval))
+                guard !Task.isCancelled else { break }
+                self?.checkForUpdatesInBackground()
+            }
+        }
+    }
+
     /// 메뉴에서 직접 확인 — 결과를 반드시 알려준다 (최신이면 최신이라고).
     func checkForUpdatesNow() {
+        lastUpdateCheck = Date()
         Task {
             do {
                 if let release = try await UpdateChecker.checkForUpdate() {
                     availableUpdate = release
                 } else {
                     availableUpdate = nil
-                    errorMessage = "최신 버전을 쓰고 계십니다 (\(currentAppVersion))."
+                    updateNotice = "최신 버전을 쓰고 계십니다 (\(currentAppVersion))."
+                    Task {
+                        try? await Task.sleep(for: .seconds(3))
+                        updateNotice = nil
+                    }
                 }
             } catch {
                 errorMessage = "업데이트 확인 실패: \(error.localizedDescription)"

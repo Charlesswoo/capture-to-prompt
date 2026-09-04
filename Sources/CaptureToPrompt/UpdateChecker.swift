@@ -86,6 +86,17 @@ enum UpdateChecker {
                        pageURL: payload.htmlURL.flatMap(URL.init(string:)))
     }
 
+    /// 확인 주기 — 앱을 켜둔 채로도 새 릴리스를 알아채되, 활성화될 때마다 조회하지는 않는다.
+    static let checkInterval: TimeInterval = 3600   // 1시간
+
+    /// 마지막 확인 이후 간격이 지났는지. 시계가 뒤로 간 경우에도 멈추지 않는다.
+    static func shouldCheck(lastCheck: Date?, now: Date = Date(),
+                            interval: TimeInterval = UpdateChecker.checkInterval) -> Bool {
+        guard let lastCheck else { return true }
+        let elapsed = now.timeIntervalSince(lastCheck)
+        return elapsed >= interval || elapsed < 0
+    }
+
     static func isUpdateAvailable(current: String, release: Release) -> Bool {
         release.version > AppVersion(current)
     }

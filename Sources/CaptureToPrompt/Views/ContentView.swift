@@ -108,7 +108,12 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 800, minHeight: 480)
-        .task { appState.checkForUpdatesInBackground() }
+        .task { appState.startPeriodicUpdateChecks() }
+        // 창을 다시 앞으로 가져올 때도 확인한다 (간격이 지났을 때만 실제로 조회)
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSApplication.didBecomeActiveNotification)) { _ in
+            appState.checkForUpdatesInBackground()
+        }
     }
 
     // MARK: - 왼쪽: 이미지 영역
@@ -207,6 +212,9 @@ struct ContentView: View {
             if let update = appState.availableUpdate {
                 updateBanner(update)
             }
+            if let notice = appState.updateNotice {
+                noticeBanner(notice)
+            }
             if let error = appState.visibleErrorMessage {
                 errorBanner(error)
             }
@@ -220,6 +228,8 @@ struct ContentView: View {
         }
         .animation(.smooth(duration: 0.25), value: isDropTargeted)
         .animation(.smooth(duration: 0.3), value: appState.currentImageData)
+        .animation(.smooth(duration: 0.25), value: appState.availableUpdate)
+        .animation(.smooth(duration: 0.25), value: appState.updateNotice)
         .onDrop(of: [.fileURL, .image], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers)
         }
@@ -388,6 +398,22 @@ struct ContentView: View {
 
     private func updateSizeText(_ update: UpdateChecker.Release) -> String {
         ByteCountFormatter.string(fromByteCount: update.byteSize, countStyle: .file)
+    }
+
+    /// 안내 배너 — 오류가 아닌 소식("최신 버전입니다" 등)에 쓴다.
+    private func noticeBanner(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+            Text(message)
+                .font(.callout)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .padding([.horizontal, .bottom], 14)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     private func errorBanner(_ message: String) -> some View {

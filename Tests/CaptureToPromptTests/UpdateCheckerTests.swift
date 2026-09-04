@@ -90,4 +90,25 @@ final class UpdateCheckerTests: XCTestCase {
         // 지우기 전에 새 번들이 있는지 확인해야 한다 — 실패 시 앱이 사라지면 안 된다
         XCTAssertTrue(script.contains("[ -d \"$NEW\" ]"))
     }
+
+    // MARK: - 주기적 확인 (2026-09-04)
+
+    func testShouldCheckRespectsInterval() {
+        let now = Date()
+        // 한 번도 확인하지 않았으면 바로 확인한다
+        XCTAssertTrue(UpdateChecker.shouldCheck(lastCheck: nil, now: now, interval: 3600))
+        // 간격이 지나지 않았으면 건너뛴다 (앱 활성화마다 조회하지 않도록)
+        XCTAssertFalse(UpdateChecker.shouldCheck(lastCheck: now.addingTimeInterval(-60),
+                                                 now: now, interval: 3600))
+        // 간격이 지났으면 다시 확인한다
+        XCTAssertTrue(UpdateChecker.shouldCheck(lastCheck: now.addingTimeInterval(-3601),
+                                                now: now, interval: 3600))
+    }
+
+    /// 시계가 뒤로 간 경우(수동 변경·절전 복귀)에도 멈추지 않아야 한다.
+    func testShouldCheckHandlesFutureLastCheck() {
+        let now = Date()
+        XCTAssertTrue(UpdateChecker.shouldCheck(lastCheck: now.addingTimeInterval(3600),
+                                                now: now, interval: 3600))
+    }
 }
