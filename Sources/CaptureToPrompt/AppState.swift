@@ -569,17 +569,17 @@ final class AppState: ObservableObject {
     }
 
     /// 분석에 쓰는 백엔드로 텍스트 요청 1회.
-    private func completeText(_ prompt: String) async throws -> String {
+    private func completeText(_ prompt: String,
+                              schema: [String: Any] = PromptRevisionAdvisor.outputSchema) async throws -> String {
         switch Backend(rawValue: backend) ?? .claudeCLI {
         case .claudeCLI:
             return try await ClaudeCLIAnalyzer(claudePath: claudePath).complete(prompt: prompt)
         case .codexCLI:
-            return try await CodexCLIAnalyzer().complete(
-                prompt: prompt, schema: PromptRevisionAdvisor.outputSchema)
+            return try await CodexCLIAnalyzer().complete(prompt: prompt, schema: schema)
         case .apiKey:
             guard !resolvedAPIKey.isEmpty else { throw AnalyzerError.missingAPIKey }
-            return try await PromptAnalyzer(apiKey: resolvedAPIKey, model: model).complete(
-                prompt: prompt, schema: PromptRevisionAdvisor.outputSchema)
+            return try await PromptAnalyzer(apiKey: resolvedAPIKey, model: model)
+                .complete(prompt: prompt, schema: schema)
         }
     }
 
@@ -733,6 +733,39 @@ final class AppState: ObservableObject {
     func reanalyzeCurrent() {
         guard let item = currentHistoryItem else { return }
         reanalyze(item)
+    }
+
+    /// 편집한 프롬프트를 나머지 언어에 맞추는 중인 항목들.
+    @Published private(set) var syncingPromptIDs: Set<UUID> = []
+
+    var isSyncingPrompt: Bool {
+        guard let id = currentHistoryID else { return false }
+        return syncingPromptIDs.contains(id)
+    }
+
+    /// 프롬프트를 고치면 나머지 두 언어를 같은 내용으로 맞춘다.
+    /// 이미지 생성은 영어 프롬프트를 쓰므로, 한국어로 고친 내용이 생성에 반영되려면
+    /// 이 동기화가 필요하다.
+    func syncEditedPrompt(_ text: String, from language: PromptAnalysis.PromptLanguage) {
+        guard let id = currentHistoryID, !syncingPromptIDs.contains(id) else { return }
+        syncingPromptIDs.insert(id)
+        Task {
+            defer { syncingPromptIDs.remove(id) }
+            do {
+                let raw = try await completeText(
+                    PromptSync.prompt(edited: text, language: language),
+                    schema: PromptSync.outputSchema)
+                // 그 사이 사용자가 또 고쳤을 수 있으므로 저장소의 최신을 기준으로 반영한다
+                guard let stored = history.items.first(where: { $0.id == id })?.analysis,
+                      stored.prompt(for: language) == text else { return }
+                let updated = try PromptSync.apply(raw, to: stored, edited: language)
+                history.update(id: id, analysis: updated)
+                if id == currentHistoryID { analysis = updated }
+            } catch {
+                setGenerationError(
+                    "다른 언어 프롬프트를 맞추지 못했습니다: \(error.localizedDescription)", for: id)
+            }
+        }
     }
 
     /// 사용자가 수정한 프롬프트를 현재 분석과 히스토리에 반영한다.

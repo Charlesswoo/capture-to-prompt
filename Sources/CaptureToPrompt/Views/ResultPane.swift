@@ -237,6 +237,13 @@ struct ResultPane: View {
                             Text("프롬프트")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
+                            if appState.isSyncingPrompt {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                Text("다른 언어 맞추는 중…")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             Spacer()
                             if selectedTab.editableLanguage != nil {
                                 Button {
@@ -291,6 +298,9 @@ struct ResultPane: View {
     private func commitPromptEdit() {
         if let language = selectedTab.editableLanguage {
             appState.applyEditedPrompt(editingText, for: language)
+            // 이미지 생성은 영어 프롬프트를 쓰므로, 다른 언어로 고쳤다면
+            // 나머지 언어를 같은 내용으로 맞춰야 수정이 생성에 반영된다
+            appState.syncEditedPrompt(editingText, from: language)
         }
         isEditingPrompt = false
     }
@@ -404,7 +414,7 @@ struct ResultPane: View {
         .menuStyle(.button)
         .buttonStyle(.glassProminent)
         .fixedSize()
-        .disabled(appState.isGeneratingImage)
+        .disabled(appState.isGeneratingImage || appState.isSyncingPrompt)
         .help("영어 프롬프트로 생성합니다 (색감·구도가 가장 정확합니다). 결과는 이 항목에 쌓입니다")
     }
 

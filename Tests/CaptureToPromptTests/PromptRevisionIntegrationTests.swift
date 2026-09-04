@@ -37,4 +37,31 @@ final class PromptRevisionIntegrationTests: XCTestCase {
         }
         print("=== revised ===\n\(revision.revisedPrompt)")
     }
+
+    /// 한국어로 고친 프롬프트가 실제로 영어·일본어에 반영되는지 (claude CLI 왕복).
+    func testRealPromptSyncThroughClaudeCLI() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["RUN_REVISION_E2E"] == "1",
+                          "Test skipped - RUN_REVISION_E2E=1 일 때만 실행")
+
+        let edited = "흐린 겨울 아침, 낡은 목조 등대 앞에 선 빨간 코트의 소녀. "
+            + "정면 전신 구도, 낮은 채도의 회청색 팔레트, 은은한 안개, 필름 그레인."
+        let raw = try await ClaudeCLIAnalyzer().complete(
+            prompt: PromptSync.prompt(edited: edited, language: .korean))
+
+        let original = PromptAnalysis(
+            promptEn: "old", promptKo: edited, promptJa: "old",
+            breakdown: .init(subject: "s", style: "s", composition: "c", lighting: "l",
+                             colorPalette: "p", mood: "m", medium: "d", tags: []))
+        let updated = try PromptSync.apply(raw, to: original, edited: .korean)
+
+        XCTAssertEqual(updated.promptKo, edited, "고친 한국어는 그대로 남아야 한다")
+        // 한국어에만 있던 요소가 영어에도 담겨야 한다
+        for keyword in ["lighthouse", "red", "coat"] {
+            XCTAssertTrue(updated.promptEn.lowercased().contains(keyword),
+                          "영어에 '\(keyword)' 누락: \(updated.promptEn)")
+        }
+        XCTAssertFalse(updated.promptJa.isEmpty)
+        print("=== synced en ===\n\(updated.promptEn)")
+        print("=== synced ja ===\n\(updated.promptJa.prefix(120))")
+    }
 }
