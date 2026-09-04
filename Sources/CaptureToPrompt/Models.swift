@@ -94,6 +94,11 @@ struct PromptAnalysis: Codable, Equatable {
     }
 }
 
+/// 이미지 생성에 쓰는 기본 프롬프트 언어.
+/// 실측(2026-09-04): 같은 프롬프트라도 한국어로 넘기면 gpt-image 계열이 색감·구도 지시를
+/// 놓치고 전혀 다른 톤을 만든다. 영어판은 원본 톤을 그대로 재현했다.
+let defaultGenerationLanguage: PromptAnalysis.PromptLanguage = .english
+
 /// 정책 거부된 프롬프트의 진단 결과 — 문제 구절과 고쳐 쓴 프롬프트.
 struct PromptRevision: Codable, Equatable {
     /// 왜 거부됐는지 한 줄 요약 (한국어).

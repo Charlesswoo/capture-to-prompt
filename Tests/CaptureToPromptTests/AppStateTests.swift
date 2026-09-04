@@ -691,4 +691,16 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(appState.isComparingWithOriginal)
         XCTAssertNil(appState.selectedGeneratedIndex)
     }
+
+    // MARK: - 이미지 생성은 영어 프롬프트 (2026-09-04 실측)
+
+    /// 한국어 프롬프트로 생성하면 색감·구도 지시를 모델이 놓친다 (실측 확인).
+    /// 그래서 언어를 지정하지 않으면 영어 프롬프트를 쓴다.
+    func testGenerationLanguageDefaultsToEnglish() {
+        XCTAssertEqual(AppState.GenerationMode.new, .new)   // 기본 모드는 그대로
+        let analysis = sampleAnalysis
+        XCTAssertEqual(analysis.prompt(for: .english), "a cat")
+        // 화면 탭과 무관하게 생성에 쓸 기본 언어는 영어
+        XCTAssertEqual(defaultGenerationLanguage, .english)
+    }
 }

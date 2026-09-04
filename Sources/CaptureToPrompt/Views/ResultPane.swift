@@ -375,8 +375,18 @@ struct ResultPane: View {
             }
             .disabled(!appState.canExtractPromptFromSelection)
 
+            if let language = currentTabLanguage, let analysis = appState.analysis {
+                Divider()
+                Button {
+                    appState.generateImage(prompt: analysis.prompt(for: language),
+                                           language: language, mode: .new)
+                } label: {
+                    Label("\(selectedTab.rawValue) 프롬프트로 생성", systemImage: "character.bubble")
+                }
+            }
+
             Divider()
-            Text("프롬프트: \(generationPromptLabel)")
+            Text("생성에는 영어 프롬프트를 씁니다 — 다른 언어로는 색감·구도가 어긋납니다")
         } label: {
             if appState.isGeneratingImage {
                 HStack(spacing: 6) {
@@ -395,24 +405,27 @@ struct ResultPane: View {
         .buttonStyle(.glassProminent)
         .fixedSize()
         .disabled(appState.isGeneratingImage)
-        .help("\(generationPromptLabel) 프롬프트로 생성합니다. 결과는 이 히스토리 항목에 쌓입니다")
+        .help("영어 프롬프트로 생성합니다 (색감·구도가 가장 정확합니다). 결과는 이 항목에 쌓입니다")
     }
 
-    /// 지금 보고 있는 언어 탭의 프롬프트 (JSON 탭은 파생 뷰라 영문을 쓴다).
+    /// 생성에는 **영어 프롬프트**를 쓴다.
+    /// 실측 결과 한국어 프롬프트를 넘기면 모델이 색감·구도 지시를 놓쳐 전혀 다른 톤이 나온다.
     private var promptForGeneration: String? {
-        guard let analysis = appState.analysis,
-              let language = selectedTab.editableLanguage else { return nil }
-        return analysis.prompt(for: language)
+        appState.analysis?.prompt(for: defaultGenerationLanguage)
     }
 
-    /// 생성에 쓸 프롬프트의 언어 (거부 기록·개선안 적용 대상이 된다).
     private var generationLanguage: PromptAnalysis.PromptLanguage {
-        selectedTab.editableLanguage ?? .english
+        defaultGenerationLanguage
     }
 
-    private var generationPromptLabel: String {
-        selectedTab.editableLanguage == nil ? "English" : selectedTab.rawValue
+    /// 보고 있는 탭이 영어가 아닐 때만 의미 있는 대안 (직접 고른 언어로 생성).
+    private var currentTabLanguage: PromptAnalysis.PromptLanguage? {
+        guard let language = selectedTab.editableLanguage,
+              language != defaultGenerationLanguage else { return nil }
+        return language
     }
+
+    private var generationPromptLabel: String { "English" }
 
     private func copyImage(_ data: Data) {
         guard let image = NSImage(data: data) else { return }
