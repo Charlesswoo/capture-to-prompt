@@ -341,9 +341,10 @@ struct ContentView: View {
             Image(systemName: "arrow.down.circle.fill")
                 .foregroundStyle(.blue)
             VStack(alignment: .leading, spacing: 2) {
-                Text("새 버전 \(update.version.description)이 있습니다 "
+                Text("새 버전 \(update.version.description) "
                      + "(현재 \(appState.currentAppVersion))")
                     .font(.callout.weight(.medium))
+                    .lineLimit(1)
                 if !update.notes.isEmpty {
                     Text(update.notes)
                         .font(.caption)
@@ -361,11 +362,12 @@ struct ContentView: View {
                         Text("설치 중…")
                     }
                 } else {
-                    Text("설치하고 다시 열기")
+                    Text("설치")
                 }
             }
             .buttonStyle(.glassProminent)
             .controlSize(.small)
+            .fixedSize()
             .disabled(appState.isInstallingUpdate)
             .help("새 버전을 내려받아 교체하고 앱을 다시 엽니다 (약 \(updateSizeText(update)))")
             Button {

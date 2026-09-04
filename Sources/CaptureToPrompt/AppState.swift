@@ -107,9 +107,6 @@ final class AppState: ObservableObject {
     @AppStorage("apiKey") private var storedAPIKey = ""
     @AppStorage("model") var model = PromptAnalyzer.defaultModel
     @AppStorage("backend") var backend = Backend.claudeCLI.rawValue
-    @AppStorage("routerBaseURL") var routerBaseURL = LLMRouterAnalyzer.defaultBaseURL
-    @AppStorage("routerAPIKey") private var storedRouterAPIKey = ""
-    @AppStorage("routerModel") var routerModel = LLMRouterAnalyzer.defaultModel
     @AppStorage("claudePath") var claudePath = ""
     @AppStorage("imageGenEngine") var imageGenEngine = ImageGenEngine.codexCLI.rawValue
     @AppStorage("imageGenBaseURL") var imageGenBaseURL = ImageGenerator.defaultBaseURL
@@ -121,7 +118,6 @@ final class AppState: ObservableObject {
         case claudeCLI = "cli"   // 로컬 Claude Code 구독 로그인 사용 (키 불필요)
         case codexCLI = "codex"  // 로컬 OpenAI Codex CLI (ChatGPT 구독, 키 불필요)
         case apiKey = "api"      // Anthropic API 키 직접 호출
-        case router = "router"   // llm-router (OpenAI 호환 단일 엔드포인트)
     }
 
     /// 분석 중 화면 등 UI에 표시할 현재 백엔드 이름.
@@ -130,7 +126,6 @@ final class AppState: ObservableObject {
         case .claudeCLI: return "Claude"
         case .codexCLI: return "Codex"
         case .apiKey: return "Claude"
-        case .router: return "LLM Router"
         }
     }
 
@@ -159,12 +154,6 @@ final class AppState: ObservableObject {
     var resolvedAPIKey: String {
         if !storedAPIKey.isEmpty { return storedAPIKey }
         return ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? ""
-    }
-
-    /// llm-router 키도 같은 순서로 해석한다.
-    var resolvedRouterKey: String {
-        if !storedRouterAPIKey.isEmpty { return storedRouterAPIKey }
-        return ProcessInfo.processInfo.environment["LLM_ROUTER_API_KEY"] ?? ""
     }
 
     /// 이미지 생성 키: 설정값 → OPENAI_API_KEY 환경변수.
@@ -311,9 +300,6 @@ final class AppState: ObservableObject {
         case .apiKey where resolvedAPIKey.isEmpty:
             errorMessage = AnalyzerError.missingAPIKey.localizedDescription
             return
-        case .router where resolvedRouterKey.isEmpty:
-            errorMessage = AnalyzerError.missingRouterKey.localizedDescription
-            return
         default:
             break
         }
@@ -340,12 +326,6 @@ final class AppState: ObservableObject {
                     imageData: normalized.data, mediaType: normalized.mediaType)
             case .apiKey:
                 let analyzer = PromptAnalyzer(apiKey: resolvedAPIKey, model: model)
-                result = try await analyzer.analyze(imageData: normalized.data,
-                                                    mediaType: normalized.mediaType)
-            case .router:
-                let analyzer = LLMRouterAnalyzer(baseURL: routerBaseURL,
-                                                 apiKey: resolvedRouterKey,
-                                                 model: routerModel)
                 result = try await analyzer.analyze(imageData: normalized.data,
                                                     mediaType: normalized.mediaType)
             }
@@ -570,11 +550,6 @@ final class AppState: ObservableObject {
         case .apiKey:
             guard !resolvedAPIKey.isEmpty else { throw AnalyzerError.missingAPIKey }
             return try await PromptAnalyzer(apiKey: resolvedAPIKey, model: model).complete(
-                prompt: prompt, schema: PromptRevisionAdvisor.outputSchema)
-        case .router:
-            guard !resolvedRouterKey.isEmpty else { throw AnalyzerError.missingRouterKey }
-            return try await LLMRouterAnalyzer(baseURL: routerBaseURL, apiKey: resolvedRouterKey,
-                                               model: routerModel).complete(
                 prompt: prompt, schema: PromptRevisionAdvisor.outputSchema)
         }
     }

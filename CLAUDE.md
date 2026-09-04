@@ -12,8 +12,9 @@ PromptCard 크롬 확장의 데스크톱 대체품. SwiftUI + SwiftPM, macOS 14+
 
 ## 프로젝트 규칙
 
-- 분석 백엔드는 2개: `ClaudeCLIAnalyzer`(claude CLI 헤드리스, 키 불필요, **기본값**) /
-  `PromptAnalyzer`(Anthropic API 키). 설정 `backend`(cli|api)로 전환.
+- 분석 백엔드는 3개: `ClaudeCLIAnalyzer`(claude CLI 헤드리스, 키 불필요, **기본값**) /
+  `CodexCLIAnalyzer`(codex CLI 헤드리스, 키 불필요) / `PromptAnalyzer`(Anthropic API 키).
+  설정 `backend`(cli|codex|api)로 전환. llm-router 백엔드는 2026-09-04 제거됨.
 - 실 E2E 검증: `RUN_CLI_E2E=1 swift test --filter CLIIntegrationTests` (구독 사용량 소모 주의).
 
 - Swift는 Anthropic 공식 SDK가 없다 → `PromptAnalyzer.swift`에서 raw HTTP

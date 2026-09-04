@@ -163,7 +163,6 @@
         <li><strong>Claude 구독</strong> + <a href="https://claude.com/claude-code">Claude Code</a> CLI</li>
         <li><strong>ChatGPT 구독</strong> + Codex CLI <span class="muted">(이미지 생성까지 기본 지원 — 3장 참고)</span></li>
         <li>Anthropic API 키</li>
-        <li>사내 LLM Router 접속 정보</li>
       </ul>
     </li>
   </ul>
@@ -208,11 +207,6 @@
       <td>Anthropic API 키</td>
       <td>API 키</td>
       <td>키를 입력하거나 <code>ANTHROPIC_API_KEY</code> 환경변수 사용. 모델 선택 가능</td>
-    </tr>
-    <tr>
-      <td>LLM Router</td>
-      <td>Router 주소 + 키</td>
-      <td>OpenAI 호환 사내 라우터. 모델 <code>auto</code> / <code>auto:cost</code> / <code>auto:speed</code> / <code>auto:quality</code></td>
     </tr>
   </table>
   <p class="muted">Claude CLI를 설치했는데 감지가 안 되면 "claude 경로" 칸에 터미널에서 <code>which claude</code>로 나온 경로를 입력하세요.</p>
@@ -310,7 +304,7 @@
     npm으로 설치한 claude를 GUI 앱이 못 찾는 경우입니다. 최신 버전은 자동으로 경로를 찾지만,
     그래도 실패하면 설정 → "claude 경로"에 <code>which claude</code> 결과를 입력하세요.</div>
   <div class="warn"><strong>"claude CLI를 찾을 수 없습니다"</strong><br>
-    Claude Code가 설치되지 않은 PC라면 설정에서 다른 백엔드(Codex CLI / API 키 / LLM Router)를 선택하세요.</div>
+    Claude Code가 설치되지 않은 PC라면 설정에서 다른 백엔드(Codex CLI / Anthropic API 키)를 선택하세요.</div>
   <div class="warn"><strong>"codex CLI를 찾을 수 없습니다"</strong><br>
     <code>brew install codex</code> 설치 후 <code>codex login</code>으로 ChatGPT 계정 로그인이 되어 있는지 확인하세요.</div>
   <div class="warn"><strong>캡처가 검게 나오거나 실패</strong><br>

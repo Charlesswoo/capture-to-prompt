@@ -147,7 +147,7 @@ struct ClaudeCLIAnalyzer {
         .apiError(
             status: 0,
             message: claudePath.isEmpty
-                ? "claude CLI를 찾을 수 없습니다. 설치되어 있다면 설정에서 claude 경로를 직접 지정하세요 (터미널에서 which claude 로 확인). Claude Code가 없는 PC라면 설정에서 다른 백엔드(Anthropic API 키 또는 LLM Router)를 선택하세요."
+                ? "claude CLI를 찾을 수 없습니다. 설치되어 있다면 설정에서 claude 경로를 직접 지정하세요 (터미널에서 which claude 로 확인). Claude Code가 없는 PC라면 설정에서 다른 백엔드(Codex CLI 또는 Anthropic API 키)를 선택하세요."
                 : "지정된 claude 경로를 실행할 수 없습니다: \(claudePath) — 설정에서 경로를 확인하세요. (터미널에서 which claude 로 확인 가능)")
     }
 
@@ -156,7 +156,7 @@ struct ClaudeCLIAnalyzer {
             throw AnalyzerError.apiError(
                 status: 0,
                 message: claudePath.isEmpty
-                    ? "claude CLI를 찾을 수 없습니다. 설치되어 있다면 설정에서 claude 경로를 직접 지정하세요 (터미널에서 which claude 로 확인). Claude Code가 없는 PC라면 설정에서 다른 백엔드(Anthropic API 키 또는 LLM Router)를 선택하세요."
+                    ? "claude CLI를 찾을 수 없습니다. 설치되어 있다면 설정에서 claude 경로를 직접 지정하세요 (터미널에서 which claude 로 확인). Claude Code가 없는 PC라면 설정에서 다른 백엔드(Codex CLI 또는 Anthropic API 키)를 선택하세요."
                     : "지정된 claude 경로를 실행할 수 없습니다: \(claudePath) — 설정에서 경로를 확인하세요. (터미널에서 which claude 로 확인 가능)")
         }
 

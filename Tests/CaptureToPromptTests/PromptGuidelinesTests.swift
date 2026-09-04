@@ -28,11 +28,10 @@ final class PromptGuidelinesTests: XCTestCase {
         XCTAssertTrue(ClaudeCLIAnalyzer.prompt(imageFileName: "input.png").contains(rules))
         XCTAssertTrue(CodexCLIAnalyzer.prompt.contains(rules))
         XCTAssertTrue(PromptAnalyzer.systemPrompt.contains(rules))
-        // llm-router는 PromptAnalyzer.systemPrompt를 그대로 재사용한다
     }
 
     /// 구조화 출력 스키마의 style/medium 설명도 같은 규칙을 안내해야 한다
-    /// (API·codex·router는 스키마를 함께 보낸다).
+    /// (API·codex는 스키마를 함께 보낸다).
     func testOutputSchemaDescribesStyleAxes() throws {
         let properties = try XCTUnwrap(PromptAnalyzer.outputSchema["properties"] as? [String: Any])
         let breakdown = try XCTUnwrap(properties["breakdown"] as? [String: Any])

@@ -175,7 +175,6 @@ extension AnalyzerError {
 
 enum AnalyzerError: LocalizedError {
     case missingAPIKey
-    case missingRouterKey
     case missingImageGenKey
     case invalidImage
     case refusal(String?)
@@ -188,8 +187,6 @@ enum AnalyzerError: LocalizedError {
         switch self {
         case .missingAPIKey:
             return "API 키가 없습니다. 설정에서 Anthropic API 키를 입력하거나 ANTHROPIC_API_KEY 환경변수를 지정하세요."
-        case .missingRouterKey:
-            return "LLM Router API 키가 없습니다. 설정에서 키를 입력하거나 LLM_ROUTER_API_KEY 환경변수를 지정하세요."
         case .missingImageGenKey:
             return "이미지 생성 API 키가 없습니다. 설정에서 키를 입력하거나 OPENAI_API_KEY 환경변수를 지정하세요."
         case .invalidImage:

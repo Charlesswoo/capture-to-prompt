@@ -187,6 +187,16 @@
   - `scripts/release.sh <버전> [노트]` — Info.plist 갱신 → 테스트 → 빌드·서명 → zip(ditto,
     서명 보존) → 태그·푸시 → `gh release create`. 커밋 안 된 변경이 있으면 중단
   테스트 160개 통과(게이트 7개 스킵). **첫 릴리스 발행 후 실제 업데이트 왕복 검증 필요**
+- [x] **llm-router 백엔드 제거** (2026-09-04 사용자 요청) — `LLMRouterAnalyzer.swift`와
+  테스트 2개 파일 삭제, `Backend.router`·`routerBaseURL/APIKey/Model`·`resolvedRouterKey`·
+  `AnalyzerError.missingRouterKey`·설정 화면 섹션·문서(guide.html) 정리.
+  `OpenAIErrorEnvelope`/`ChatCompletionResponse`는 이 파일에만 있고 다른 곳에서 안 써서
+  함께 삭제(ImageGenerator는 자체 `ImageErrorEnvelope` 사용). 남은 백엔드 3개:
+  Claude CLI(기본) / Codex CLI / Anthropic API. 테스트 148개 통과
+- [x] **업데이트 배너 실동작 확인** (2026-09-04) — v0.3.0 발행 후 앱(0.2.0) 재시작하니
+  "새 버전 0.3.0이 있습니다 (현재 0.2.0)" 배너가 노트와 함께 표시됨. 조회·비교·다운로드·
+  서명 보존·교체·재실행까지 전 구간 검증 완료. 좁은 창에서 버튼 텍스트가 잘려
+  "설치하고 다시 열기" → "설치"로 줄이고 `fixedSize()` 적용
 - [x] 실캡처 검증: 자동 분석 off "분석 대기" 화면, 메타 접힘+연필 버튼, 좁아진 사이드바
 - [ ] 실캡처 검증 잔여(합성 클릭 중단 — 사용자 기기 사용 중): 분석 시작 버튼 실행 흐름,
   연필 편집 모드 화면, 메타 펼침, 설정 토글 화면 — 직접 사용하며 확인 권장

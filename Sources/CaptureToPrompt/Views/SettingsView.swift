@@ -5,9 +5,6 @@ struct SettingsView: View {
     @AppStorage("backend") private var backend = AppState.Backend.claudeCLI.rawValue
     @AppStorage("apiKey") private var apiKey = ""
     @AppStorage("model") private var model = PromptAnalyzer.defaultModel
-    @AppStorage("routerBaseURL") private var routerBaseURL = LLMRouterAnalyzer.defaultBaseURL
-    @AppStorage("routerAPIKey") private var routerAPIKey = ""
-    @AppStorage("routerModel") private var routerModel = LLMRouterAnalyzer.defaultModel
     @AppStorage("claudePath") private var claudePath = ""
     @AppStorage("imageGenEngine") private var imageGenEngine = AppState.ImageGenEngine.codexCLI.rawValue
     @AppStorage("imageGenBaseURL") private var imageGenBaseURL = ImageGenerator.defaultBaseURL
@@ -65,7 +62,6 @@ struct SettingsView: View {
                     Text("Claude Code CLI (키 불필요)").tag(AppState.Backend.claudeCLI.rawValue)
                     Text("Codex CLI (키 불필요)").tag(AppState.Backend.codexCLI.rawValue)
                     Text("Anthropic API 키").tag(AppState.Backend.apiKey.rawValue)
-                    Text("LLM Router (OpenAI 호환)").tag(AppState.Backend.router.rawValue)
                 }
                 .pickerStyle(.radioGroup)
 
@@ -128,26 +124,6 @@ struct SettingsView: View {
                 }
             }
 
-            if backend == AppState.Backend.router.rawValue {
-                Section {
-                    TextField("Base URL", text: $routerBaseURL,
-                              prompt: Text(LLMRouterAnalyzer.defaultBaseURL))
-                        .autocorrectionDisabled()
-                    SecureField("LLM Router API 키", text: $routerAPIKey)
-                        .textContentType(.password)
-                    Text("비워두면 LLM_ROUTER_API_KEY 환경변수를 사용합니다.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Section {
-                    TextField("모델", text: $routerModel,
-                              prompt: Text(LLMRouterAnalyzer.defaultModel))
-                        .autocorrectionDisabled()
-                    Text("auto = 자동 라우팅. auto:cost / auto:speed / auto:quality 라우팅 목표나 특정 모델 id도 지정할 수 있습니다.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
 
             Section("이미지 생성") {
                 Picker("엔진", selection: $imageGenEngine) {

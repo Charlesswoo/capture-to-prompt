@@ -1,7 +1,7 @@
 import Foundation
 
 /// OpenAI 호환 Images API(`POST {base}/images/generations`)로 프롬프트 → 이미지 생성.
-/// Base URL만 바꾸면 OpenAI 직결이든 향후 llm-router든 동일하게 동작한다.
+/// Base URL만 바꾸면 OpenAI 직결이든 호환 프록시든 동일하게 동작한다.
 struct ImageGenerator {
     static let defaultBaseURL = "https://api.openai.com/v1"
     static let defaultModel = "gpt-image-2"
