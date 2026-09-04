@@ -660,6 +660,20 @@ final class AppState: ObservableObject {
             ? nil : Swift.min(index, generatedImages.count - 1)
     }
 
+    /// 히스토리 항목을 지운다.
+    /// 보고 있던 항목이면 화면(이미지·프롬프트·생성본)도 함께 비운다 —
+    /// 저장소만 지우면 사라진 항목의 내용이 화면에 남는다.
+    func deleteHistoryItem(_ item: HistoryItem) {
+        let wasShowing = currentHistoryID == item.id
+        history.delete(item)
+        // 그 항목에 매달려 있던 상태도 함께 정리
+        generationErrors[item.id] = nil
+        policyRejections[item.id] = nil
+        revisions[item.id] = nil
+        finishGeneration(for: item.id)
+        if wasShowing { startNewCapture() }
+    }
+
     // MARK: - 원본 재분석
 
     /// 보고 있는 히스토리 항목 (재분석 대상).

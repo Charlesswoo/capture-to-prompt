@@ -67,7 +67,7 @@ struct HistorySidebar: View {
                 Spacer(minLength: 0)
                 if hoveredID == item.id {
                     Button {
-                        history.delete(item)
+                        appState.deleteHistoryItem(item)
                     } label: {
                         Image(systemName: "trash")
                             .foregroundStyle(.secondary)
@@ -101,7 +101,7 @@ struct HistorySidebar: View {
                 }
             }
             Button("항목 삭제", role: .destructive) {
-                history.delete(item)
+                appState.deleteHistoryItem(item)
             }
         }
     }

@@ -598,4 +598,54 @@ final class AppStateTests: XCTestCase {
         appState.finishAnalysis(second)
         XCTAssertEqual(appState.runningAnalysisCount, 1)
     }
+
+    // MARK: - 히스토리 항목 삭제 (2026-09-04 사용자 버그 리포트)
+
+    /// 보고 있던 항목을 지우면 화면(이미지·프롬프트)도 함께 비워져야 한다.
+    func testDeletingShownItemClearsScreen() throws {
+        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
+                             fileExtension: "png")
+        appState.show(item)
+        appState.storeGeneratedImage(Data([9, 9]), for: item.id)
+        XCTAssertNotNil(appState.analysis)
+
+        appState.deleteHistoryItem(item)
+
+        XCTAssertNil(appState.analysis, "삭제했는데 프롬프트가 남아 있음")
+        XCTAssertNil(appState.currentImageData, "삭제했는데 이미지가 남아 있음")
+        XCTAssertNil(appState.currentHistoryItem)
+        XCTAssertTrue(appState.generatedImages.isEmpty)
+        XCTAssertTrue(store.items.isEmpty)
+    }
+
+    /// 다른 항목을 보는 중에 지우면 보던 화면은 그대로여야 한다.
+    func testDeletingOtherItemKeepsScreen() throws {
+        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        appState.show(a)
+
+        appState.deleteHistoryItem(b)
+
+        XCTAssertNotNil(appState.analysis)
+        XCTAssertEqual(appState.currentHistoryItem?.id, a.id)
+        XCTAssertEqual(store.items.count, 1)
+    }
+
+    /// 삭제한 항목에 매달린 상태(오류·거부 기록·개선안·진행 표시)도 함께 정리된다.
+    func testDeletingItemClearsItsPendingState() throws {
+        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
+                             fileExtension: "png")
+        appState.show(item)
+        appState.recordGenerationFailure(AnalyzerError.contentPolicy("safety"),
+                                         prompt: "p", language: .english, for: item.id)
+        appState.setRevision(PromptRevision(summary: "s", issues: [], revisedPrompt: "r"),
+                             for: item.id)
+        appState.beginGeneration(for: item.id)
+
+        appState.deleteHistoryItem(item)
+
+        XCTAssertFalse(appState.hasGenerationError(for: item.id))
+        XCTAssertNil(appState.policyRejection(for: item.id))
+        XCTAssertFalse(appState.isGenerating(for: item.id))
+    }
 }
