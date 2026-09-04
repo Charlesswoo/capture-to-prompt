@@ -5,6 +5,8 @@ struct HistorySidebar: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var history: HistoryStore
     @State private var hoveredID: UUID?
+    /// 삭제는 되돌릴 수 없으므로 한 번 확인한다 (원본·프롬프트·생성본이 함께 사라진다).
+    @State private var itemToDelete: HistoryItem?
 
     var body: some View {
         List {
@@ -26,6 +28,38 @@ struct HistorySidebar: View {
         }
         .listStyle(.sidebar)
         .navigationTitle("히스토리")
+        .confirmationDialog(
+            "이 항목을 삭제할까요?",
+            isPresented: Binding(get: { itemToDelete != nil },
+                                 set: { if !$0 { itemToDelete = nil } }),
+            titleVisibility: .visible,
+            presenting: itemToDelete
+        ) { item in
+            Button("삭제", role: .destructive) {
+                appState.deleteHistoryItem(item)
+                itemToDelete = nil
+            }
+            Button("취소", role: .cancel) { itemToDelete = nil }
+        } message: { item in
+            Text(deletionSummary(item))
+        }
+    }
+
+    /// 삭제하면 무엇이 사라지는지 — 원본·프롬프트는 항상, 생성본은 있을 때만.
+    private func deletionSummary(_ item: HistoryItem) -> String {
+        let subject = item.analysis.breakdown.subject
+        let title = subject.count > 40 ? String(subject.prefix(40)) + "…" : subject
+        var lines = ["\(title)\n"]
+        let generated = item.generatedImageFileNames.count
+        if generated > 0 {
+            let size = ByteCountFormatter.string(
+                fromByteCount: history.generatedImagesByteSize(id: item.id), countStyle: .file)
+            lines.append("원본 캡처와 프롬프트, 생성 이미지 \(generated)장(\(size))이 함께 지워집니다.")
+        } else {
+            lines.append("원본 캡처와 프롬프트가 지워집니다.")
+        }
+        lines.append("되돌릴 수 없습니다.")
+        return lines.joined(separator: "\n")
     }
 
     private func rowView(_ item: HistoryItem) -> some View {
@@ -67,7 +101,7 @@ struct HistorySidebar: View {
                 Spacer(minLength: 0)
                 if hoveredID == item.id {
                     Button {
-                        appState.deleteHistoryItem(item)
+                        itemToDelete = item
                     } label: {
                         Image(systemName: "trash")
                             .foregroundStyle(.secondary)
@@ -101,7 +135,7 @@ struct HistorySidebar: View {
                 }
             }
             Button("항목 삭제", role: .destructive) {
-                appState.deleteHistoryItem(item)
+                itemToDelete = item
             }
         }
     }
