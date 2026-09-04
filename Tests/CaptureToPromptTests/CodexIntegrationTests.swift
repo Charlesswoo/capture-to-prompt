@@ -28,6 +28,16 @@ final class CodexIntegrationTests: XCTestCase {
             XCTAssertFalse(prompt.contains(" --"), "플래그 발견: \(prompt.suffix(60))")
         }
         print("Codex E2E OK — subject: \(analysis.breakdown.subject)")
+        // 백엔드가 달라도 결과 형식은 같아야 한다 — 화풍 5축 + 인물 포즈
+        let style = analysis.breakdown.style
+        for label in ["Line work:", "Shading:", "Color:", "Rendering:", "Finish:"] {
+            XCTAssertTrue(style.contains(label), "style 축 누락(\(label)): \(style)")
+        }
+        if ProcessInfo.processInfo.environment["E2E_EXPECT_FIGURE"] == "1" {
+            XCTAssertFalse(analysis.breakdown.pose.isEmpty, "인물 이미지인데 pose가 비어 있음")
+        }
+        print("Codex E2E OK — style: \(style.prefix(120))")
+        print("Codex E2E OK — pose : \(analysis.breakdown.pose.isEmpty ? "(없음)" : String(analysis.breakdown.pose.prefix(120)))")
         print("Codex E2E OK — prompt_ko: \(analysis.promptKo.prefix(120))")
     }
 }

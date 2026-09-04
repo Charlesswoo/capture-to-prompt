@@ -117,7 +117,9 @@ final class AppStateTests: XCTestCase {
 
         appState.show(a)
         XCTAssertEqual(appState.generatedImages, [Data([9, 9])])
-        XCTAssertNil(appState.selectedGeneratedIndex)  // 되돌아오면 원본부터 보여준다
+        // 생성본이 있으면 되돌아왔을 때 최신 생성본을 원본과 나란히 열어준다
+        XCTAssertEqual(appState.selectedGeneratedIndex, 0)
+        XCTAssertTrue(appState.isComparingWithOriginal)
     }
 
     func testGeneratedImagesReloadAfterRestart() throws {
@@ -647,5 +649,46 @@ final class AppStateTests: XCTestCase {
         XCTAssertFalse(appState.hasGenerationError(for: item.id))
         XCTAssertNil(appState.policyRejection(for: item.id))
         XCTAssertFalse(appState.isGenerating(for: item.id))
+    }
+
+    // MARK: - 항목을 열 때 생성본이 있으면 바로 비교 (2026-09-04 사용자 요청)
+
+    func testShowOpensComparisonWhenGeneratedImagesExist() throws {
+        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
+                             fileExtension: "png")
+        appState.show(item)
+        appState.storeGeneratedImage(Data([9, 9]), for: item.id)
+        appState.storeGeneratedImage(Data([8, 8]), for: item.id)
+
+        appState.show(item)   // 다시 열기
+
+        XCTAssertEqual(appState.selectedGeneratedIndex, 1, "가장 최근 생성본을 골라야 한다")
+        XCTAssertTrue(appState.isComparingWithOriginal, "생성본이 있으면 바로 비교로 연다")
+        XCTAssertTrue(appState.canCompare)
+    }
+
+    /// 생성본이 없으면 원본만 — 비교할 대상이 없다.
+    func testShowStaysOnOriginalWithoutGeneratedImages() throws {
+        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
+                             fileExtension: "png")
+        appState.show(item)
+
+        XCTAssertNil(appState.selectedGeneratedIndex)
+        XCTAssertFalse(appState.isComparingWithOriginal)
+    }
+
+    /// 새 분석·새 캡처는 비교할 생성본이 없으므로 원본 보기로 시작한다.
+    func testStartNewCaptureLeavesComparisonOff() throws {
+        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
+                             fileExtension: "png")
+        appState.show(item)
+        appState.storeGeneratedImage(Data([9, 9]), for: item.id)
+        appState.show(item)
+        XCTAssertTrue(appState.isComparingWithOriginal)
+
+        appState.startNewCapture()
+
+        XCTAssertFalse(appState.isComparingWithOriginal)
+        XCTAssertNil(appState.selectedGeneratedIndex)
     }
 }

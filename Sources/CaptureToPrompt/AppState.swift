@@ -385,14 +385,15 @@ final class AppState: ObservableObject {
 
     /// 항목에 저장된 생성 이미지를 디스크에서 읽어 화면 상태에 채운다.
     /// 넘겨받은 HistoryItem은 값 타입 스냅샷이라 오래됐을 수 있으므로 저장소에서 다시 조회한다.
-    /// 다시 열었을 때는 원본부터 보여준다(선택은 초기화).
+    /// 생성본이 있으면 **가장 최근 것을 원본과 나란히** 열어준다 —
+    /// 이 항목을 다시 여는 이유는 대개 결과를 원본과 견주어 보기 위해서다.
     private func loadGeneratedImages(for id: UUID) {
         let fileNames = history.items.first(where: { $0.id == id })?.generatedImageFileNames ?? []
         generatedImages = fileNames.compactMap {
             try? Data(contentsOf: history.generatedImageURL(fileName: $0))
         }
-        selectedGeneratedIndex = nil
-        isComparingWithOriginal = false
+        selectedGeneratedIndex = generatedImages.isEmpty ? nil : generatedImages.count - 1
+        isComparingWithOriginal = !generatedImages.isEmpty
     }
 
     /// 화면의 생성 이미지 상태만 비운다 (디스크의 히스토리는 건드리지 않는다).
