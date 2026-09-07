@@ -312,48 +312,74 @@ struct ResultPane: View {
     /// 거기서 지금 보고 있는 생성본에 적용된다.
     private var imageGenBar: some View {
         HStack(spacing: 8) {
-            if let data = appState.selectedGeneratedImage {
-                Button {
-                    copyImage(data)
-                } label: {
-                    Label("복사", systemImage: "doc.on.doc")
+            if appState.selectedGeneratedImage != nil {
+                // 패널이 좁아지면(최소 280pt) 텍스트가 잘리므로 아이콘만 남긴다
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) { generatedImageActions(showsText: true) }
+                    HStack(spacing: 8) { generatedImageActions(showsText: false) }
                 }
-                .buttonStyle(.glass)
-                .controlSize(.small)
-                .help("보고 있는 생성 이미지를 복사합니다")
-                Button {
-                    saveImage(data)
-                } label: {
-                    Label("저장…", systemImage: "square.and.arrow.down")
-                }
-                .buttonStyle(.glass)
-                .controlSize(.small)
-                .help("보고 있는 생성 이미지를 PNG로 저장합니다")
-                Menu {
-                    Button("이 생성본 삭제", systemImage: "trash") {
-                        appState.deleteSelectedGeneratedImage()
-                    }
-                    if appState.currentGeneratedImageCount > 1 {
-                        Divider()
-                        Button("생성본 \(appState.currentGeneratedImageCount)장 모두 삭제",
-                               systemImage: "trash.slash", role: .destructive) {
-                            confirmDeleteAll = true
-                        }
-                    }
-                } label: {
-                    Image(systemName: "trash")
-                }
-                .menuStyle(.button)
-                .buttonStyle(.glass)
-                .controlSize(.small)
                 .fixedSize()
-                .help("생성 이미지를 삭제합니다 (이 장만 또는 전부)")
             }
-            Spacer()
+            Spacer(minLength: 8)
             generateMenu
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
+    }
+
+    /// 좁은 패널에서는 아이콘만 (텍스트가 줄임표로 잘리는 것 방지).
+    @ViewBuilder
+    private func actionLabel(_ title: String, icon: String, showsText: Bool) -> some View {
+        if showsText {
+            Label(title, systemImage: icon)
+        } else {
+            Label(title, systemImage: icon).labelStyle(.iconOnly)
+        }
+    }
+
+    /// 보고 있는 생성본에 대한 동작 — 복사·저장·삭제.
+    @ViewBuilder
+    private func generatedImageActions(showsText: Bool) -> some View {
+        if let data = appState.selectedGeneratedImage {
+            Button {
+                copyImage(data)
+            } label: {
+                actionLabel("복사", icon: "doc.on.doc", showsText: showsText)
+            }
+            .buttonStyle(.glass)
+            .controlSize(.small)
+            .help("보고 있는 생성 이미지를 복사합니다")
+
+            Button {
+                saveImage(data)
+            } label: {
+                // "저장…"의 말줄임표는 대화상자가 열린다는 macOS 관례 표기다
+                actionLabel("저장…", icon: "square.and.arrow.down", showsText: showsText)
+            }
+            .buttonStyle(.glass)
+            .controlSize(.small)
+            .help("보고 있는 생성 이미지를 PNG로 저장합니다")
+
+            Menu {
+                Button("이 생성본 삭제", systemImage: "trash") {
+                    appState.deleteSelectedGeneratedImage()
+                }
+                if appState.currentGeneratedImageCount > 1 {
+                    Divider()
+                    Button("생성본 \(appState.currentGeneratedImageCount)장 모두 삭제",
+                           systemImage: "trash.slash", role: .destructive) {
+                        confirmDeleteAll = true
+                    }
+                }
+            } label: {
+                Image(systemName: "trash")
+            }
+            .menuStyle(.button)
+            .buttonStyle(.glass)
+            .controlSize(.small)
+            .fixedSize()
+            .help("생성 이미지를 삭제합니다 (이 장만 또는 전부)")
+        }
     }
 
     /// 주 버튼은 "새로 생성", 화살표를 누르면 변형·교체·프롬프트 추출.

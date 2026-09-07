@@ -75,4 +75,34 @@ final class PromptGuidelinesTests: XCTestCase {
         let required = try XCTUnwrap(breakdown["required"] as? [String])
         XCTAssertTrue(required.contains("pose"))
     }
+
+    // MARK: - 세 언어 프롬프트 (독립 작성 → 번역 방식)
+
+    func testLanguageRulesMakeEnglishDefinitive() {
+        let rules = PromptGuidelines.languageRules
+
+        // 영어가 정본이고 나머지는 같은 내용이어야 한다
+        XCTAssertTrue(rules.contains("prompt_en"))
+        XCTAssertTrue(rules.lowercased().contains("same content"))
+        // 축약·추가 금지 (기존에는 ko/ja가 영어의 절반 분량으로 축약됐다)
+        XCTAssertTrue(rules.lowercased().contains("nothing added"))
+        // 직역이 아니라 그 언어의 자연스러운 프롬프트여야 한다
+        XCTAssertTrue(rules.lowercased().contains("natural"))
+    }
+
+    func testAllBackendPromptsIncludeLanguageRules() {
+        let rules = PromptGuidelines.languageRules
+        XCTAssertTrue(ClaudeCLIAnalyzer.prompt(imageFileName: "input.png").contains(rules))
+        XCTAssertTrue(CodexCLIAnalyzer.prompt.contains(rules))
+        XCTAssertTrue(PromptAnalyzer.systemPrompt.contains(rules))
+    }
+
+    /// 예전 지시("각 언어로 독립 작성")가 남아 있으면 안 된다.
+    func testNoIndependentAuthoringInstructionRemains() {
+        for text in [ClaudeCLIAnalyzer.prompt(imageFileName: "i.png"),
+                     CodexCLIAnalyzer.prompt, PromptAnalyzer.systemPrompt] {
+            XCTAssertFalse(text.contains("not a translation note"),
+                           "독립 작성 지시가 남아 있음")
+        }
+    }
 }

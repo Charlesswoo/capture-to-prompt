@@ -46,6 +46,18 @@ final class CLIIntegrationTests: XCTestCase {
         }
         print("E2E OK — pose  : \(pose.isEmpty ? "(없음)" : pose)")
 
+        // 세 언어는 같은 내용이어야 한다 — 축약되면 한국어 탭에서 본 것과
+        // 실제 생성(영어) 결과가 어긋난다
+        let en = analysis.promptEn.count, ko = analysis.promptKo.count, ja = analysis.promptJa.count
+        print("E2E 길이 — en \(en) / ko \(ko) / ja \(ja)")
+        // 한글·가나는 글자당 정보량이 커서 영어보다 짧은 게 정상이라 길이 비율은
+        // 품질 지표로 약하다(실측: 지시문을 번역 방식으로 바꿔도 ko/en은 0.48→0.51).
+        // 명백한 축약만 잡는 느슨한 하한으로 둔다.
+        XCTAssertGreaterThan(Double(ko) / Double(en), 0.4,
+                             "한국어가 영어의 40% 미만 — 내용 누락 의심")
+        XCTAssertGreaterThan(Double(ja) / Double(en), 0.3,
+                             "일본어가 영어의 30% 미만 — 내용 누락 의심")
+
         print("E2E OK — subject: \(analysis.breakdown.subject)")
         print("E2E OK — style : \(style)")
         print("E2E OK — medium: \(analysis.breakdown.medium)")

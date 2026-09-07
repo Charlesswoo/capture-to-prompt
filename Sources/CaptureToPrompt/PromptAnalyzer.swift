@@ -13,9 +13,9 @@ struct PromptAnalyzer {
     Reproducing the ORIGINAL DRAWING STYLE matters as much as the subject. \
     Then produce a single detailed, generation-ready prompt that would recreate the \
     look of this image as closely as possible. Write the prompt in three languages \
-    (English, Korean, Japanese) — each must be a self-contained prompt, not a \
-    translation note. Also fill in the structured breakdown fields. Keep tags short \
-    (1-3 words each, English, lowercase). \
+    (English, Korean, Japanese). Also fill in the structured breakdown fields. \
+    Keep tags short (1-3 words each, English, lowercase). \
+    \(PromptGuidelines.languageRules)
     \(PromptGuidelines.poseRules)
     \(PromptGuidelines.styleRules)
     """

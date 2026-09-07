@@ -44,10 +44,10 @@ struct ClaudeCLIAnalyzer {
         and mood, then produce a single detailed generation-ready prompt that would \
         recreate the look of this image. Respond with ONLY a raw JSON object \
         (no markdown fences, no commentary) with exactly these keys: \
-        prompt_en, prompt_ko, prompt_ja (each a self-contained detailed prompt in that \
-        language, not a translation note), and breakdown (object with keys: subject, \
+        prompt_en, prompt_ko, prompt_ja (image-generation prompts), and breakdown (object with keys: subject, \
         style, composition, lighting, color_palette, mood, medium, \
         tags (array of short lowercase english strings)). \
+        \(PromptGuidelines.languageRules)
         \(PromptGuidelines.poseRules)
         \(PromptGuidelines.styleRules)
         """

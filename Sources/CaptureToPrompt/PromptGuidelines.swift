@@ -27,6 +27,22 @@ enum PromptGuidelines {
     in words (e.g. "vertical 2:3 portrait format").
     """
 
+    /// 세 언어 프롬프트 규칙 — 영어가 정본, 나머지는 같은 내용의 자연스러운 번역.
+    ///
+    /// 처음에는 각 언어를 독립 작성하게 했는데(2026-09-03까지) 내용과 분량이 어긋났다
+    /// (실측: en 1437자 / ko 763자 / ja 594자 — 한국어·일본어가 절반 수준으로 축약).
+    /// 이미지 생성에는 영어만 쓰므로, 한국어 탭을 읽고 예상한 것과 실제 생성 결과가
+    /// 달라지는 문제가 있었다. 영어를 정본으로 삼아 세 탭이 같은 내용을 담게 한다.
+    static let languageRules = """
+    Write prompt_en first as the definitive version, with every detail. prompt_ko \
+    (Korean) and prompt_ja (Japanese) must then carry exactly the same content as \
+    prompt_en — same subject, pose, composition, lighting, color palette, style and \
+    mood, with nothing added, dropped or reinterpreted. Render each one as a natural, \
+    self-contained image-generation prompt in its own language rather than a \
+    word-for-word transliteration, and keep them comparable in detail to the English \
+    version — never a shortened summary.
+    """
+
     /// 인물 포즈 규칙. PoC(2026-09-03) 결과 subject에 포즈를 몰아넣으면 1200자를 넘겨
     /// 인물 외형 묘사가 밀리고, subject를 목록 제목으로 쓰는 사이드바도 읽기 어려워졌다.
     /// 그래서 pose를 전용 필드로 분리했다.
