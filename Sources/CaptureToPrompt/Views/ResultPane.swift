@@ -37,8 +37,8 @@ struct ResultPane: View {
             // (스피너는 보여줄 분석이 없을 때만)
             if let analysis = appState.analysis {
                 resultView(analysis)
-            } else if appState.pendingImageData != nil {
-                // 다른 분석이 도는 중이어도 대기 캡처의 '분석 시작'은 가리지 않는다
+            } else if appState.currentItemNeedsAnalysis {
+                // 다른 분석이 도는 중이어도 이 항목의 '분석 시작'은 가리지 않는다
                 pendingView
             } else if appState.isAnalyzing {
                 analyzingView

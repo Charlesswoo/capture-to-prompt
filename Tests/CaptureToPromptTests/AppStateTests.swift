@@ -41,23 +41,21 @@ final class AppStateTests: XCTestCase {
     // MARK: - 프롬프트 수정
 
     func testApplyEditedPromptUpdatesAnalysisAndHistory() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
 
         appState.applyEditedPrompt("수정된 고양이", for: .korean)
 
         XCTAssertEqual(appState.analysis?.promptKo, "수정된 고양이")
         XCTAssertEqual(appState.analysis?.promptEn, "a cat")  // 다른 언어는 유지
-        XCTAssertEqual(store.items.first?.analysis.promptKo, "수정된 고양이")
+        XCTAssertEqual(store.items.first?.analysis?.promptKo, "수정된 고양이")
 
         let reloaded = HistoryStore(directory: tempDir)
-        XCTAssertEqual(reloaded.items.first?.analysis.promptKo, "수정된 고양이")
+        XCTAssertEqual(reloaded.items.first?.analysis?.promptKo, "수정된 고양이")
     }
 
     func testApplyEditedPromptPerLanguage() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
 
         appState.applyEditedPrompt("an edited cat", for: .english)
@@ -70,15 +68,19 @@ final class AppStateTests: XCTestCase {
 
     // MARK: - 캡처 후 자동 분석 옵션
 
-    func testHandleCapturedWithAutoAnalyzeOffStoresPendingWithoutAnalyzing() async throws {
+    /// 캡처하면 분석 전이라도 히스토리 항목이 생겨 사이드바에서 되돌아올 수 있어야 한다.
+    func testHandleCapturedCreatesHistoryItemBeforeAnalysis() async throws {
         appState.autoAnalyzeOnCapture = false
 
         await appState.handleCaptured(rawImageData: try tinyPNG())
 
         XCTAssertFalse(appState.isAnalyzing)
         XCTAssertNil(appState.analysis)
-        XCTAssertNotNil(appState.pendingImageData)
-        XCTAssertNotNil(appState.currentImageData)  // 이미지는 화면에 표시
+        XCTAssertEqual(store.items.count, 1, "캡처가 사이드바에 남지 않음")
+        XCTAssertNil(store.items.first?.analysis, "분석 전이므로 결과는 비어 있다")
+        XCTAssertNotNil(appState.currentImageData)          // 이미지는 화면에 표시
+        XCTAssertEqual(appState.currentHistoryID, store.items.first?.id)
+        XCTAssertTrue(appState.currentItemNeedsAnalysis)
     }
 
     func testHandleCapturedWithInvalidImageReportsError() async {
@@ -86,15 +88,14 @@ final class AppStateTests: XCTestCase {
 
         await appState.handleCaptured(rawImageData: Data([0, 1, 2]))
 
-        XCTAssertNil(appState.pendingImageData)
+        XCTAssertTrue(store.items.isEmpty)
         XCTAssertNotNil(appState.errorMessage)
     }
 
     // MARK: - 생성 이미지 보관 (히스토리 전환에도 유지)
 
     func testStoreGeneratedImageAppendsAndSelectsLatest() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
 
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
@@ -106,8 +107,8 @@ final class AppStateTests: XCTestCase {
     }
 
     func testGeneratedImagesSurviveHistorySwitch() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(a)
         appState.storeGeneratedImage(Data([9, 9]), for: a.id)
 
@@ -123,8 +124,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testGeneratedImagesReloadAfterRestart() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
 
@@ -138,8 +138,8 @@ final class AppStateTests: XCTestCase {
 
     /// 생성(약 1분) 중에 다른 히스토리를 고르면, 결과는 원래 항목에만 저장돼야 한다.
     func testGeneratedImageGoesToOriginItemNotCurrentView() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(a)
         appState.show(b)  // 생성 중에 다른 항목으로 이동
 
@@ -151,8 +151,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testDeleteSelectedGeneratedImage() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
         appState.storeGeneratedImage(Data([8, 8]), for: item.id)
@@ -170,8 +169,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testStartNewCaptureClearsGeneratedImages() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
 
@@ -186,8 +184,8 @@ final class AppStateTests: XCTestCase {
     // MARK: - 항목별 동시 생성
 
     func testGenerationProgressIsPerHistoryItem() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
 
         appState.beginGeneration(for: a.id)
         appState.beginGeneration(for: b.id)
@@ -204,7 +202,7 @@ final class AppStateTests: XCTestCase {
 
     /// 생성 중인 항목으로 옮겨가면 그 항목의 경과 시간이 이어져 보여야 한다.
     func testGenerationStartTimeIsPerItem() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.beginGeneration(for: a.id)
         appState.show(a)
 
@@ -216,8 +214,7 @@ final class AppStateTests: XCTestCase {
     // MARK: - 탭 자리 교체 생성
 
     func testStoreGeneratedImageReplacingKeepsPositionAndSelection() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
         appState.storeGeneratedImage(Data([8, 8]), for: item.id)
@@ -241,8 +238,7 @@ final class AppStateTests: XCTestCase {
     // MARK: - 원본·생성본 나란히 보기
 
     func testCompareModeNeedsGeneratedSelection() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.isComparingWithOriginal = true
         XCTAssertFalse(appState.canCompare)  // 원본만 있으면 비교할 게 없다
@@ -258,8 +254,7 @@ final class AppStateTests: XCTestCase {
     // MARK: - 생성본에서 프롬프트 추출
 
     func testGeneratedImageIsAnalyzableAsNewSource() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(try tinyPNG(), for: item.id)
 
@@ -273,8 +268,8 @@ final class AppStateTests: XCTestCase {
     // MARK: - 생성 오류는 항목별로 (동시 생성 대응)
 
     func testGenerationErrorIsShownOnlyOnItsOwnItem() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(b)
 
         appState.setGenerationError("정책 위반", for: a.id)
@@ -289,8 +284,8 @@ final class AppStateTests: XCTestCase {
 
     /// 두 항목이 동시에 실패해도 서로 덮어쓰지 않는다.
     func testGenerationErrorsDoNotOverwriteEachOther() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
 
         appState.setGenerationError("A 실패", for: a.id)
         appState.setGenerationError("B 실패", for: b.id)
@@ -302,8 +297,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testSuccessfulGenerationClearsThatItemsError() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.setGenerationError("일시 실패", for: item.id)
 
@@ -314,8 +308,8 @@ final class AppStateTests: XCTestCase {
     }
 
     func testDismissClearsOnlyTheVisibleError() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.setGenerationError("A 실패", for: a.id)
         appState.setGenerationError("B 실패", for: b.id)
         appState.show(a)
@@ -329,8 +323,7 @@ final class AppStateTests: XCTestCase {
 
     /// 캡처·분석 같은 화면 전역 오류는 보고 있는 항목과 무관하게 그대로 보인다.
     func testGlobalErrorStillShows() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.errorMessage = "클립보드에 이미지가 없습니다."
 
@@ -349,8 +342,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testPolicyRejectionIsRecordedWithPromptAndLanguage() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
 
         appState.recordGenerationFailure(AnalyzerError.contentPolicy("safety system"),
@@ -366,8 +358,7 @@ final class AppStateTests: XCTestCase {
 
     /// 정책과 무관한 실패는 개선 제안 대상이 아니다.
     func testNonPolicyFailureIsNotOfferedForRevision() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
 
         appState.recordGenerationFailure(AnalyzerError.apiError(status: 429, message: "slow down"),
                                          prompt: "a cat", language: .english, for: item.id)
@@ -378,8 +369,8 @@ final class AppStateTests: XCTestCase {
 
     /// 개선 제안은 항목별로 남아, 다른 항목을 보다 돌아와도 그대로 있다.
     func testRevisionIsKeptPerItem() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.recordGenerationFailure(AnalyzerError.contentPolicy(nil),
                                          prompt: "p", language: .korean, for: a.id)
         appState.setRevision(sampleRevision, for: a.id)
@@ -392,8 +383,7 @@ final class AppStateTests: XCTestCase {
 
     /// 제안 적용: 거부됐던 언어의 프롬프트가 히스토리까지 갱신된다.
     func testApplyRevisionUpdatesThatLanguageAndHistory() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.recordGenerationFailure(AnalyzerError.contentPolicy(nil),
                                          prompt: "a cat", language: .english, for: item.id)
@@ -403,7 +393,7 @@ final class AppStateTests: XCTestCase {
 
         XCTAssertEqual(appState.analysis?.promptEn, "a portrait of a young woman")
         XCTAssertEqual(appState.analysis?.promptKo, "고양이")  // 다른 언어는 그대로
-        XCTAssertEqual(store.items.first { $0.id == item.id }?.analysis.promptEn,
+        XCTAssertEqual(store.items.first { $0.id == item.id }?.analysis?.promptEn,
                        "a portrait of a young woman")
         // 적용했으면 거부 상태와 배너는 정리된다
         XCTAssertNil(appState.policyRejection(for: item.id))
@@ -412,8 +402,7 @@ final class AppStateTests: XCTestCase {
 
     /// 생성에 성공하면 그 항목의 거부 기록·제안도 함께 사라진다.
     func testSuccessClearsRejectionAndRevision() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.recordGenerationFailure(AnalyzerError.contentPolicy(nil),
                                          prompt: "a cat", language: .english, for: item.id)
@@ -430,11 +419,10 @@ final class AppStateTests: XCTestCase {
     /// 항목을 다시 열 때 오래된 스냅샷이 아니라 저장소의 최신 분석을 보여줘야 한다.
     /// (사이드바 셀이 리렌더되지 않으면 수정 전 HistoryItem이 그대로 넘어온다)
     func testShowUsesLatestAnalysisNotStaleSnapshot() throws {
-        let stale = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                              fileExtension: "png")
+        let stale = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(stale)
         appState.applyEditedPrompt("내가 수정한 프롬프트", for: .korean)
-        XCTAssertEqual(store.items.first?.analysis.promptKo, "내가 수정한 프롬프트")
+        XCTAssertEqual(store.items.first?.analysis?.promptKo, "내가 수정한 프롬프트")
 
         // 수정 전에 만들어진 스냅샷으로 다시 연다 (사이드바가 넘기는 값)
         appState.show(stale)
@@ -445,8 +433,7 @@ final class AppStateTests: XCTestCase {
 
     /// 옛 스냅샷으로 연 뒤 다른 언어를 고치면, 앞서 수정한 언어까지 되돌아가면 안 된다.
     func testEditAfterReopenDoesNotRevertEarlierEdit() throws {
-        let stale = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                              fileExtension: "png")
+        let stale = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(stale)
         appState.applyEditedPrompt("한국어 수정본", for: .korean)
 
@@ -462,15 +449,14 @@ final class AppStateTests: XCTestCase {
 
     func testOriginalImageDataReadsStoredFile() throws {
         let png = try tinyPNG()
-        let item = store.add(analysis: sampleAnalysis, imageData: png, fileExtension: "png")
+        let item = store.add(imageData: png, fileExtension: "png", analysis: sampleAnalysis)
 
         XCTAssertEqual(appState.originalImageData(for: item), png)
     }
 
     /// 원본 파일이 사라졌으면 재분석할 수 없다고 알려야 한다.
     func testReanalyzeReportsMissingOriginal() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         try FileManager.default.removeItem(at: store.imageURL(for: item))
 
         XCTAssertNil(appState.originalImageData(for: item))
@@ -482,8 +468,7 @@ final class AppStateTests: XCTestCase {
     /// 보고 있는 항목이 없으면 재분석 대상도 없다.
     func testCurrentReanalyzableItemFollowsSelection() throws {
         XCTAssertNil(appState.currentHistoryItem)
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         XCTAssertEqual(appState.currentHistoryItem?.id, item.id)
         appState.startNewCapture()
@@ -493,8 +478,7 @@ final class AppStateTests: XCTestCase {
     // MARK: - 생성 이미지 일괄 삭제
 
     func testDeleteAllGeneratedImagesClearsScreenState() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
         appState.storeGeneratedImage(Data([8, 8]), for: item.id)
@@ -511,8 +495,8 @@ final class AppStateTests: XCTestCase {
 
     /// 보고 있지 않은 항목의 생성본도 사이드바에서 정리할 수 있다.
     func testDeleteAllGeneratedImagesForOtherItemKeepsCurrentScreen() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(a)
         appState.storeGeneratedImage(Data([9, 9]), for: a.id)
         appState.storeGeneratedImage(Data([7, 7]), for: b.id)
@@ -524,8 +508,7 @@ final class AppStateTests: XCTestCase {
     }
 
     func testGeneratedImageCountAndSizeForCurrentItem() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         XCTAssertEqual(appState.currentGeneratedImageCount, 0)
 
@@ -538,8 +521,8 @@ final class AppStateTests: XCTestCase {
     // MARK: - 분석 병렬 실행 (2026-09-04 사용자 지적: 재추출이 전역으로 잠긴다)
 
     func testAnalysesRunInParallelPerItem() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
 
         let jobA = appState.beginAnalysis(sourceHistoryID: a.id, takesOverScreen: false)
         let jobB = appState.beginAnalysis(sourceHistoryID: b.id, takesOverScreen: false)
@@ -557,8 +540,7 @@ final class AppStateTests: XCTestCase {
 
     /// 재분석은 백그라운드 — 보고 있던 프롬프트가 스피너로 덮이면 안 된다.
     func testBackgroundAnalysisKeepsCurrentScreen() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
 
         _ = appState.beginAnalysis(sourceHistoryID: item.id, takesOverScreen: false)
@@ -578,8 +560,8 @@ final class AppStateTests: XCTestCase {
 
     /// 재분석 도중 다른 항목으로 옮겨갔으면 결과가 화면을 가로채면 안 된다.
     func testBackgroundResultDoesNotHijackScreenAfterNavigatingAway() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(a)
         let job = appState.beginAnalysis(sourceHistoryID: a.id, takesOverScreen: false)
 
@@ -592,8 +574,7 @@ final class AppStateTests: XCTestCase {
 
     /// 진행 중 분석이 있어도 새 분석을 걸 수 있다 (분석 대기 버튼은 예외 없이).
     func testCanStartAnotherAnalysisWhileOneRuns() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         _ = appState.beginAnalysis(sourceHistoryID: item.id, takesOverScreen: false)
         let second = appState.beginAnalysis(sourceHistoryID: nil, takesOverScreen: true)
         XCTAssertEqual(appState.runningAnalysisCount, 2)
@@ -605,8 +586,7 @@ final class AppStateTests: XCTestCase {
 
     /// 보고 있던 항목을 지우면 화면(이미지·프롬프트)도 함께 비워져야 한다.
     func testDeletingShownItemClearsScreen() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
         XCTAssertNotNil(appState.analysis)
@@ -622,8 +602,8 @@ final class AppStateTests: XCTestCase {
 
     /// 다른 항목을 보는 중에 지우면 보던 화면은 그대로여야 한다.
     func testDeletingOtherItemKeepsScreen() throws {
-        let a = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(), fileExtension: "png")
+        let a = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(a)
 
         appState.deleteHistoryItem(b)
@@ -635,8 +615,7 @@ final class AppStateTests: XCTestCase {
 
     /// 삭제한 항목에 매달린 상태(오류·거부 기록·개선안·진행 표시)도 함께 정리된다.
     func testDeletingItemClearsItsPendingState() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.recordGenerationFailure(AnalyzerError.contentPolicy("safety"),
                                          prompt: "p", language: .english, for: item.id)
@@ -654,8 +633,7 @@ final class AppStateTests: XCTestCase {
     // MARK: - 항목을 열 때 생성본이 있으면 바로 비교 (2026-09-04 사용자 요청)
 
     func testShowOpensComparisonWhenGeneratedImagesExist() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
         appState.storeGeneratedImage(Data([8, 8]), for: item.id)
@@ -669,8 +647,7 @@ final class AppStateTests: XCTestCase {
 
     /// 생성본이 없으면 원본만 — 비교할 대상이 없다.
     func testShowStaysOnOriginalWithoutGeneratedImages() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
 
         XCTAssertNil(appState.selectedGeneratedIndex)
@@ -679,8 +656,7 @@ final class AppStateTests: XCTestCase {
 
     /// 새 분석·새 캡처는 비교할 생성본이 없으므로 원본 보기로 시작한다.
     func testStartNewCaptureLeavesComparisonOff() throws {
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
+        let item = store.add(imageData: try tinyPNG(), fileExtension: "png", analysis: sampleAnalysis)
         appState.show(item)
         appState.storeGeneratedImage(Data([9, 9]), for: item.id)
         appState.show(item)
@@ -743,47 +719,46 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(appState.runningAnalysisCount, 1)
     }
 
-    // MARK: - 분석 중 캡처한 이미지 유실 (2026-09-08 사용자 리포트)
+    // MARK: - 분석 전 캡처도 사이드바에서 다룰 수 있어야 한다 (2026-09-08)
 
-    /// 히스토리 항목을 열어봤다고 대기 중인 캡처가 사라지면 안 된다.
-    /// (아직 분석 전이라 히스토리에도 없어서, 지워지면 되찾을 길이 없다)
-    func testPendingCaptureSurvivesHistoryBrowsing() async throws {
+    /// 다른 항목을 열어봐도 캡처는 히스토리에 남아 언제든 돌아갈 수 있다.
+    func testCaptureSurvivesHistoryBrowsing() async throws {
         appState.autoAnalyzeOnCapture = false
         await appState.handleCaptured(rawImageData: try tinyPNG())
-        XCTAssertNotNil(appState.pendingImageData)
+        let captured = try XCTUnwrap(store.items.first)
 
-        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
-                             fileExtension: "png")
-        appState.show(item)
-
-        XCTAssertNotNil(appState.pendingImageData, "히스토리를 열자 대기 캡처가 사라짐")
-        XCTAssertTrue(appState.hasPendingCapture)
-    }
-
-    /// 대기 중인 캡처로 돌아갈 수 있어야 한다.
-    func testReturnToPendingCapture() async throws {
-        appState.autoAnalyzeOnCapture = false
-        let png = try tinyPNG()
-        await appState.handleCaptured(rawImageData: png)
-        let item = store.add(analysis: sampleAnalysis, imageData: png, fileExtension: "png")
-        appState.show(item)
+        let other = store.add(imageData: try tinyPNG(), fileExtension: "png",
+                              analysis: sampleAnalysis)
+        appState.show(other)
         XCTAssertNotNil(appState.analysis)
 
-        appState.showPendingCapture()
+        appState.show(captured)   // 캡처로 돌아오기
 
-        XCTAssertNil(appState.analysis, "대기 캡처 화면으로 돌아가야 한다")
+        XCTAssertNil(appState.analysis)
         XCTAssertNotNil(appState.currentImageData)
-        XCTAssertNil(appState.currentHistoryID)
+        XCTAssertEqual(appState.currentHistoryID, captured.id)
+        XCTAssertTrue(appState.currentItemNeedsAnalysis)
     }
 
-    /// 새 캡처로 시작하면 대기 상태도 정리된다.
-    func testStartNewCaptureClearsPending() async throws {
+    /// 분석이 끝나면 새 항목을 만드는 대신 그 항목을 채운다 (중복 방지).
+    func testAnalysisFillsTheCapturedItemInsteadOfAddingNew() async throws {
         appState.autoAnalyzeOnCapture = false
         await appState.handleCaptured(rawImageData: try tinyPNG())
+        let captured = try XCTUnwrap(store.items.first)
+        XCTAssertEqual(store.items.count, 1)
 
-        appState.startNewCapture()
+        // 분석 완료를 흉내낸다 (실제 백엔드 호출 없이 저장 경로만 검증)
+        store.update(id: captured.id, analysis: sampleAnalysis)
 
-        XCTAssertNil(appState.pendingImageData)
-        XCTAssertFalse(appState.hasPendingCapture)
+        XCTAssertEqual(store.items.count, 1, "분석 후 항목이 중복 생성됨")
+        XCTAssertNotNil(store.items.first?.analysis)
+    }
+
+    /// 아직 분석되지 않은 항목만 '분석 시작' 대상이다.
+    func testAnalyzeItemSkipsAlreadyAnalyzed() throws {
+        let analyzed = store.add(imageData: try tinyPNG(), fileExtension: "png",
+                                 analysis: sampleAnalysis)
+        appState.analyzeItem(analyzed)
+        XCTAssertEqual(appState.runningAnalysisCount, 0)
     }
 }

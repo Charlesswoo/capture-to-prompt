@@ -130,8 +130,6 @@ final class AppState: ObservableObject {
     /// 지금 화면을 차지한 분석. 캡처를 잇따라 걸면 마지막 것이 화면의 주인이 되고,
     /// 앞서 걸린 분석이 먼저 끝나도 화면을 빼앗지 않는다.
     private var foregroundAnalysisID: UUID?
-    /// 자동 분석 off일 때 캡처만 해두고 '분석 시작'을 기다리는 이미지.
-    @Published var pendingImageData: Data?
     /// 현재 화면의 분석이 히스토리 어느 항목에서 왔는지 — 프롬프트 수정 반영용.
     private(set) var currentHistoryID: UUID?
 
@@ -247,7 +245,6 @@ final class AppState: ObservableObject {
         analysis = nil
         currentImageData = nil
         clearGeneratedImages()
-        pendingImageData = nil
         errorMessage = nil
         currentHistoryID = nil
     }
@@ -291,46 +288,57 @@ final class AppState: ObservableObject {
     /// 캡처 결과 공통 진입점: 옵션에 따라 바로 분석하거나, 이미지만 띄우고 대기한다.
     /// (파일 열기·클립보드·드롭은 사용자가 이미 본 이미지이므로 항상 즉시 분석)
     func handleCaptured(rawImageData: Data) async {
-        if autoAnalyzeOnCapture {
-            await analyze(rawImageData: rawImageData)
-            return
-        }
         errorMessage = nil
         guard let normalized = ImageProcessor.normalize(rawImageData) else {
             errorMessage = AnalyzerError.invalidImage.localizedDescription
             return
         }
-        currentImageData = normalized.data
-        analysis = nil
-        clearGeneratedImages()
-        currentHistoryID = nil
-        pendingImageData = normalized.data
+        // 분석 여부와 상관없이 항목을 먼저 만든다 — 그래야 사이드바에서 언제든 되돌아올 수
+        // 있고, 다른 화면을 보다가 캡처를 잃어버리지 않는다. 분석은 이 항목에 붙는다.
+        let item = store(normalized)
+        show(item)
+        guard autoAnalyzeOnCapture else { return }
+        await analyze(rawImageData: normalized.data, sourceHistoryID: item.id,
+                      targetHistoryID: item.id)
     }
 
-    /// 분석을 기다리는 캡처가 있는지 (히스토리에 아직 없는 이미지).
-    var hasPendingCapture: Bool { pendingImageData != nil }
-
-    /// 대기 중인 캡처 화면으로 돌아간다.
-    func showPendingCapture() {
-        guard let pending = pendingImageData else { return }
-        currentImageData = pending
-        analysis = nil
-        clearGeneratedImages()
-        currentHistoryID = nil
-        errorMessage = nil
+    /// 정규화한 이미지를 히스토리에 보관한다 (분석 전).
+    private func store(_ normalized: (data: Data, mediaType: String)) -> HistoryItem {
+        let ext = normalized.mediaType == "image/png" ? "png" : "jpg"
+        return history.add(imageData: normalized.data, fileExtension: ext)
     }
 
-    /// '분석 시작' 버튼: 대기 중인 캡처 이미지를 분석한다.
+    /// 보고 있는 항목이 아직 분석되지 않았는지 ('분석 시작' 화면 조건).
+    var currentItemNeedsAnalysis: Bool {
+        analysis == nil && currentImageData != nil && currentHistoryID != nil
+    }
+
+    /// '분석 시작' 버튼: 보고 있는(아직 분석 안 된) 항목의 프롬프트를 뽑는다.
+    /// 다른 분석이 돌고 있어도 함께 진행된다.
     func analyzePending() {
-        guard let pending = pendingImageData else { return }
-        Task { await analyze(rawImageData: pending) }
+        guard let data = currentImageData, let id = currentHistoryID, analysis == nil,
+              !isAnalyzing(for: id) else { return }
+        Task { await analyze(rawImageData: data, sourceHistoryID: id, targetHistoryID: id) }
+    }
+
+    /// 사이드바에서 아직 분석되지 않은 항목을 바로 분석한다.
+    func analyzeItem(_ item: HistoryItem) {
+        guard item.analysis == nil, !isAnalyzing(for: item.id),
+              let data = originalImageData(for: item) else { return }
+        let takesOver = currentHistoryID == item.id
+        Task {
+            await analyze(rawImageData: data, sourceHistoryID: item.id,
+                          targetHistoryID: item.id, takesOverScreen: takesOver)
+        }
     }
 
     /// 이미지를 분석해 새 히스토리 항목을 만든다.
     /// - sourceHistoryID: 재분석이면 원본 항목 (백그라운드로 돌며 화면을 비우지 않는다).
     /// - takesOverScreen: 새 캡처처럼 화면을 점유하고 스피너를 띄울지.
     /// 여러 건이 동시에 돌 수 있다 — 이미지마다 병렬.
+    /// - targetHistoryID: 캡처 때 미리 만들어 둔 항목 (분석 결과를 여기에 붙인다).
     func analyze(rawImageData: Data, sourceHistoryID: UUID? = nil,
+                 targetHistoryID: UUID? = nil,
                  takesOverScreen: Bool = true) async {
         errorMessage = nil
         guard let normalized = ImageProcessor.normalize(rawImageData) else {
@@ -353,8 +361,7 @@ final class AppState: ObservableObject {
             currentImageData = normalized.data
             analysis = nil
             clearGeneratedImages()
-            currentHistoryID = nil
-            pendingImageData = nil
+            currentHistoryID = targetHistoryID   // 캡처로 만들어 둔 항목이면 그대로 유지
         }
         let job = beginAnalysis(sourceHistoryID: sourceHistoryID,
                                 takesOverScreen: takesOverScreen)
@@ -373,11 +380,19 @@ final class AppState: ObservableObject {
                 result = try await analyzer.analyze(imageData: normalized.data,
                                                     mediaType: normalized.mediaType)
             }
-            let ext = normalized.mediaType == "image/png" ? "png" : "jpg"
-            let item = history.add(analysis: result, imageData: normalized.data,
-                                   fileExtension: ext)
+            // 캡처 때 만들어 둔 항목이 있으면 거기에 분석을 붙이고, 없으면 새로 만든다
+            let item: HistoryItem
+            if let target = targetHistoryID,
+               let existing = history.items.first(where: { $0.id == target }) {
+                history.update(id: target, analysis: result)
+                item = existing
+            } else {
+                let ext = normalized.mediaType == "image/png" ? "png" : "jpg"
+                item = history.add(imageData: normalized.data, fileExtension: ext,
+                                   analysis: result)
+            }
             // 그 사이 사용자가 다른 항목으로 옮겨갔으면 화면을 가로채지 않는다
-            // (히스토리에는 이미 추가됐으므로 사이드바에서 바로 열 수 있다)
+            // (히스토리에는 이미 있으므로 사이드바에서 바로 열 수 있다)
             if shouldPresentResult(of: job) {
                 show(item)
             }

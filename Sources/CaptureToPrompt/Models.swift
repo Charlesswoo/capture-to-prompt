@@ -126,11 +126,12 @@ struct HistoryItem: Codable, Equatable, Identifiable {
     var id: UUID
     var createdAt: Date
     var imageFileName: String
-    var analysis: PromptAnalysis
+    /// 분석 결과. 캡처 직후에는 nil — 이미지를 먼저 보관하고 분석은 나중에 붙인다.
+    var analysis: PromptAnalysis?
     /// 이 항목에서 생성한 이미지들의 파일명(오래된 순). 생성할 때마다 누적된다.
     var generatedImageFileNames: [String]
 
-    init(id: UUID, createdAt: Date, imageFileName: String, analysis: PromptAnalysis,
+    init(id: UUID, createdAt: Date, imageFileName: String, analysis: PromptAnalysis? = nil,
          generatedImageFileNames: [String] = []) {
         self.id = id
         self.createdAt = createdAt
@@ -145,7 +146,7 @@ struct HistoryItem: Codable, Equatable, Identifiable {
         id = try container.decode(UUID.self, forKey: .id)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         imageFileName = try container.decode(String.self, forKey: .imageFileName)
-        analysis = try container.decode(PromptAnalysis.self, forKey: .analysis)
+        analysis = try container.decodeIfPresent(PromptAnalysis.self, forKey: .analysis)
         generatedImageFileNames =
             try container.decodeIfPresent([String].self, forKey: .generatedImageFileNames) ?? []
     }

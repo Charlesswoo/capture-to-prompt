@@ -25,7 +25,7 @@ final class HistoryStoreTests: XCTestCase {
     func testAddPersistsAndReloads() throws {
         let store = HistoryStore(directory: tempDir)
         let imageData = Data([1, 2, 3, 4])
-        let item = store.add(analysis: sampleAnalysis, imageData: imageData, fileExtension: "png")
+        let item = store.add(imageData: imageData, fileExtension: "png", analysis: sampleAnalysis)
 
         XCTAssertEqual(store.items.count, 1)
         XCTAssertEqual(try Data(contentsOf: store.imageURL(for: item)), imageData)
@@ -43,7 +43,7 @@ final class HistoryStoreTests: XCTestCase {
 
     func testDeleteRemovesItemAndImage() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([9]), fileExtension: "png")
+        let item = store.add(imageData: Data([9]), fileExtension: "png", analysis: sampleAnalysis)
         let imageURL = store.imageURL(for: item)
         XCTAssertTrue(FileManager.default.fileExists(atPath: imageURL.path))
 
@@ -57,21 +57,21 @@ final class HistoryStoreTests: XCTestCase {
 
     func testUpdateAnalysisPersists() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([1]), fileExtension: "png")
+        let item = store.add(imageData: Data([1]), fileExtension: "png", analysis: sampleAnalysis)
 
         var edited = sampleAnalysis
         edited.promptKo = "수정된 고양이"
         store.update(id: item.id, analysis: edited)
 
-        XCTAssertEqual(store.items.first?.analysis.promptKo, "수정된 고양이")
+        XCTAssertEqual(store.items.first?.analysis?.promptKo, "수정된 고양이")
 
         let reloaded = HistoryStore(directory: tempDir)
-        XCTAssertEqual(reloaded.items.first?.analysis.promptKo, "수정된 고양이")
+        XCTAssertEqual(reloaded.items.first?.analysis?.promptKo, "수정된 고양이")
     }
 
     func testUpdateUnknownIDIsNoOp() {
         let store = HistoryStore(directory: tempDir)
-        store.add(analysis: sampleAnalysis, imageData: Data([1]))
+        store.add(imageData: Data([1]), analysis: sampleAnalysis)
         store.update(id: UUID(), analysis: sampleAnalysis)
         XCTAssertEqual(store.items.count, 1)
         XCTAssertEqual(store.items.first?.analysis, sampleAnalysis)
@@ -79,8 +79,8 @@ final class HistoryStoreTests: XCTestCase {
 
     func testNewestFirstOrdering() {
         let store = HistoryStore(directory: tempDir)
-        store.add(analysis: sampleAnalysis, imageData: Data([1]))
-        let second = store.add(analysis: sampleAnalysis, imageData: Data([2]))
+        store.add(imageData: Data([1]), analysis: sampleAnalysis)
+        let second = store.add(imageData: Data([2]), analysis: sampleAnalysis)
         XCTAssertEqual(store.items.first?.id, second.id)
     }
 
@@ -88,8 +88,8 @@ final class HistoryStoreTests: XCTestCase {
 
     func testAddGeneratedImagePersistsAndReloads() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([1, 2, 3]),
-                             fileExtension: "png")
+        let item = store.add(imageData: Data([1, 2, 3]), fileExtension: "png",
+                             analysis: sampleAnalysis)
 
         let first = try XCTUnwrap(store.addGeneratedImage(id: item.id, data: Data([9, 9])))
         let second = try XCTUnwrap(store.addGeneratedImage(id: item.id, data: Data([8, 8])))
@@ -103,7 +103,7 @@ final class HistoryStoreTests: XCTestCase {
 
     func testRemoveGeneratedImageDeletesFileAndEntry() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([1]), fileExtension: "png")
+        let item = store.add(imageData: Data([1]), fileExtension: "png", analysis: sampleAnalysis)
         let first = try XCTUnwrap(store.addGeneratedImage(id: item.id, data: Data([9])))
         let second = try XCTUnwrap(store.addGeneratedImage(id: item.id, data: Data([8])))
 
@@ -116,7 +116,7 @@ final class HistoryStoreTests: XCTestCase {
 
     func testDeleteItemRemovesGeneratedImageFiles() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([1]), fileExtension: "png")
+        let item = store.add(imageData: Data([1]), fileExtension: "png", analysis: sampleAnalysis)
         let generated = try XCTUnwrap(store.addGeneratedImage(id: item.id, data: Data([9])))
         let stored = try XCTUnwrap(store.items.first)
 
@@ -153,7 +153,7 @@ final class HistoryStoreTests: XCTestCase {
     /// 탭 자리 교체: 목록 순서를 유지한 채 그 자리 파일만 바뀐다.
     func testReplaceGeneratedImageKeepsPosition() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([1]), fileExtension: "png")
+        let item = store.add(imageData: Data([1]), fileExtension: "png", analysis: sampleAnalysis)
         let first = try XCTUnwrap(store.addGeneratedImage(id: item.id, data: Data([9])))
         let second = try XCTUnwrap(store.addGeneratedImage(id: item.id, data: Data([8])))
 
@@ -173,7 +173,7 @@ final class HistoryStoreTests: XCTestCase {
     /// 교체 대상이 이미 사라졌으면(다른 곳에서 삭제) 조용히 무시한다.
     func testReplaceGeneratedImageReturnsNilForUnknownFile() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([1]), fileExtension: "png")
+        let item = store.add(imageData: Data([1]), fileExtension: "png", analysis: sampleAnalysis)
         XCTAssertNil(store.replaceGeneratedImage(id: item.id, fileName: "없음.png",
                                                  data: Data([7])))
     }
@@ -182,8 +182,8 @@ final class HistoryStoreTests: XCTestCase {
 
     func testRemoveAllGeneratedImagesClearsFilesButKeepsItem() throws {
         let store = HistoryStore(directory: tempDir)
-        let a = store.add(analysis: sampleAnalysis, imageData: Data([1]), fileExtension: "png")
-        let b = store.add(analysis: sampleAnalysis, imageData: Data([2]), fileExtension: "png")
+        let a = store.add(imageData: Data([1]), fileExtension: "png", analysis: sampleAnalysis)
+        let b = store.add(imageData: Data([2]), fileExtension: "png", analysis: sampleAnalysis)
         let a1 = try XCTUnwrap(store.addGeneratedImage(id: a.id, data: Data([9])))
         let a2 = try XCTUnwrap(store.addGeneratedImage(id: a.id, data: Data([8])))
         let b1 = try XCTUnwrap(store.addGeneratedImage(id: b.id, data: Data([7])))
@@ -211,14 +211,14 @@ final class HistoryStoreTests: XCTestCase {
 
     func testRemoveAllGeneratedImagesOnEmptyItemIsNoOp() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([1]), fileExtension: "png")
+        let item = store.add(imageData: Data([1]), fileExtension: "png", analysis: sampleAnalysis)
         XCTAssertEqual(store.removeAllGeneratedImages(id: item.id), 0)
     }
 
     /// 삭제 전 사용자에게 보여줄 용량.
     func testGeneratedImagesByteSize() throws {
         let store = HistoryStore(directory: tempDir)
-        let item = store.add(analysis: sampleAnalysis, imageData: Data([1]), fileExtension: "png")
+        let item = store.add(imageData: Data([1]), fileExtension: "png", analysis: sampleAnalysis)
         XCTAssertEqual(store.generatedImagesByteSize(id: item.id), 0)
 
         store.addGeneratedImage(id: item.id, data: Data(repeating: 0, count: 1000))

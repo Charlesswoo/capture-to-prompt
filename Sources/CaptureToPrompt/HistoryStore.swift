@@ -33,8 +33,11 @@ final class HistoryStore: ObservableObject {
         items = decoded
     }
 
+    /// 이미지를 보관하고 항목을 만든다. 분석은 나중에 `update(id:analysis:)`로 붙인다
+    /// (캡처 즉시 목록에 남겨야 분석 전에도 잃어버리지 않는다).
     @discardableResult
-    func add(analysis: PromptAnalysis, imageData: Data, fileExtension: String = "jpg") -> HistoryItem {
+    func add(imageData: Data, fileExtension: String = "jpg",
+             analysis: PromptAnalysis? = nil) -> HistoryItem {
         let id = UUID()
         let fileName = "\(id.uuidString).\(fileExtension)"
         do {

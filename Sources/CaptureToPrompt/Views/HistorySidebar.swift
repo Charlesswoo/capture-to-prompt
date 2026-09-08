@@ -47,7 +47,7 @@ struct HistorySidebar: View {
 
     /// 삭제하면 무엇이 사라지는지 — 원본·프롬프트는 항상, 생성본은 있을 때만.
     private func deletionSummary(_ item: HistoryItem) -> String {
-        let subject = item.analysis.breakdown.subject
+        let subject = item.analysis?.breakdown.subject ?? "분석 전 캡처"
         let title = subject.count > 40 ? String(subject.prefix(40)) + "…" : subject
         var lines = ["\(title)\n"]
         let generated = item.generatedImageFileNames.count
@@ -69,9 +69,10 @@ struct HistorySidebar: View {
             HStack(spacing: 10) {
                 thumbnail(for: item)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(item.analysis.breakdown.subject)
+                    Text(item.analysis?.breakdown.subject ?? "분석 대기 중")
                         .lineLimit(2)
                         .font(.callout)
+                        .foregroundStyle(item.analysis == nil ? .secondary : .primary)
                     HStack(spacing: 5) {
                         Text(item.createdAt, format: .relative(presentation: .named))
                         // 이 항목에 생성 이미지가 보관돼 있음을 표시 (다시 눌러 열면 복원)
@@ -88,7 +89,11 @@ struct HistorySidebar: View {
                         } else if appState.isAnalyzing(for: item.id) {
                             ProgressView()
                                 .controlSize(.mini)
-                                .help("이 원본으로 다시 분석 중 — 끝나면 새 항목이 추가됩니다")
+                                .help("분석 중")
+                        } else if item.analysis == nil {
+                            Image(systemName: "hourglass")
+                                .foregroundStyle(.orange)
+                                .help("아직 분석하지 않은 캡처 — 눌러서 열고 분석할 수 있습니다")
                         } else if appState.hasGenerationError(for: item.id) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)
@@ -123,9 +128,13 @@ struct HistorySidebar: View {
             }
             .help("이 항목의 원본 캡처 이미지로 프롬프트를 새로 뽑습니다 (결과는 새 항목)")
             Divider()
-            Button("프롬프트 복사 (한국어)") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(item.analysis.promptKo, forType: .string)
+            if let analysis = item.analysis {
+                Button("프롬프트 복사 (한국어)") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(analysis.promptKo, forType: .string)
+                }
+            } else {
+                Button("분석 시작") { appState.analyzeItem(item) }
             }
             // 보고 있지 않은 항목의 생성본도 여기서 정리할 수 있다
             if !item.generatedImageFileNames.isEmpty {
