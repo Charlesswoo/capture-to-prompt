@@ -58,6 +58,15 @@ final class CLIIntegrationTests: XCTestCase {
         XCTAssertGreaterThan(Double(ja) / Double(en), 0.3,
                              "일본어가 영어의 30% 미만 — 내용 누락 의심")
 
+        // 카메라 시점 — 어디서 보고 있는지가 빠지면 기본 아이레벨로 렌더된다
+        let composition = analysis.breakdown.composition.lowercased()
+        let angleWords = ["eye level", "eye-level", "low angle", "low-angle", "high angle",
+                          "high-angle", "overhead", "dutch", "looking up", "looking down",
+                          "from above", "from below"]
+        XCTAssertTrue(angleWords.contains { composition.contains($0) },
+                      "composition에 카메라 앵글이 없음: \(analysis.breakdown.composition)")
+        print("E2E OK — composition: \(analysis.breakdown.composition.prefix(160))")
+
         // E2E_DUMP를 주면 결과 전문을 파일로 남긴다 (언어 간 내용 대조용)
         if let dump = ProcessInfo.processInfo.environment["E2E_DUMP"] {
             let encoder = JSONEncoder()

@@ -43,6 +43,30 @@ enum PromptGuidelines {
     version — never a shortened summary.
     """
 
+    /// 카메라 앵글·시점 규칙.
+    ///
+    /// 실측(2026-09-08): 히스토리 3건 중 앵글이 또렷이 적힌 것은 1건뿐이었다.
+    /// composition이 "화면 어디에 배치됐는지"만 적고 **어디서 보고 있는지**는 빠졌다.
+    /// 같은 인물·같은 포즈라도 로우앵글이냐 하이앵글이냐에 따라 전혀 다른 그림이 되므로
+    /// 카메라 쪽 정보를 반드시 담게 한다. (pose는 피사체 쪽, composition은 카메라 쪽)
+    static let cameraRules = """
+    The "composition" field must state where the camera is, not just where things sit in \
+    the frame: camera height and tilt (eye level, low angle looking up, high angle looking \
+    down, overhead, or a dutch tilt), shooting distance (close-up, bust, waist-up, \
+    full-body, wide establishing), and the lens character that follows from it (wide-angle \
+    spread and edge distortion, normal, or telephoto compression with a flattened \
+    background). Also note the horizon or vanishing-point placement when it is visible. \
+    Carry the same viewpoint into the prompts — state the angle early, right after the \
+    style clause, because a prompt that omits it gets rendered at a default eye-level view.
+    """
+
+    /// breakdown.composition 스키마 설명.
+    static let compositionFieldDescription = """
+    Framing and camera viewpoint: camera height and tilt (eye level / low / high / \
+    overhead / dutch), shooting distance, lens character, subject placement in frame, \
+    and horizon or vanishing-point placement when visible.
+    """
+
     /// 인물 포즈 규칙. PoC(2026-09-03) 결과 subject에 포즈를 몰아넣으면 1200자를 넘겨
     /// 인물 외형 묘사가 밀리고, subject를 목록 제목으로 쓰는 사이드바도 읽기 어려워졌다.
     /// 그래서 pose를 전용 필드로 분리했다.

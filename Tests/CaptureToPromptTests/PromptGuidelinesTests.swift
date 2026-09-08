@@ -105,4 +105,36 @@ final class PromptGuidelinesTests: XCTestCase {
                            "독립 작성 지시가 남아 있음")
         }
     }
+
+    // MARK: - 카메라 앵글·시점 (2026-09-08 사용자 지적)
+
+    func testCameraRulesCoverAngleAndLens() {
+        let rules = PromptGuidelines.cameraRules
+
+        // 카메라 높이·기울기 — 같은 포즈라도 앵글이 다르면 전혀 다른 그림이 된다
+        for axis in ["eye level", "low angle", "high angle", "camera height"] {
+            XCTAssertTrue(rules.lowercased().contains(axis), "앵글 축 누락: \(axis)")
+        }
+        // 거리·렌즈감 (광각 왜곡 / 망원 압축)
+        XCTAssertTrue(rules.lowercased().contains("lens"))
+        XCTAssertTrue(rules.lowercased().contains("distance"))
+        // composition 필드에 담으라는 지시
+        XCTAssertTrue(rules.contains("composition"))
+    }
+
+    func testAllBackendPromptsIncludeCameraRules() {
+        let rules = PromptGuidelines.cameraRules
+        XCTAssertTrue(ClaudeCLIAnalyzer.prompt(imageFileName: "input.png").contains(rules))
+        XCTAssertTrue(CodexCLIAnalyzer.prompt.contains(rules))
+        XCTAssertTrue(PromptAnalyzer.systemPrompt.contains(rules))
+    }
+
+    func testCompositionSchemaMentionsCamera() throws {
+        let properties = try XCTUnwrap(PromptAnalyzer.outputSchema["properties"] as? [String: Any])
+        let breakdown = try XCTUnwrap(properties["breakdown"] as? [String: Any])
+        let fields = try XCTUnwrap(breakdown["properties"] as? [String: Any])
+        let composition = try XCTUnwrap(fields["composition"] as? [String: Any])
+        let description = try XCTUnwrap(composition["description"] as? String)
+        XCTAssertTrue(description.lowercased().contains("camera"))
+    }
 }

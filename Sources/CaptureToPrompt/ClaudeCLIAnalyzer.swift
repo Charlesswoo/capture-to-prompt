@@ -48,6 +48,7 @@ struct ClaudeCLIAnalyzer {
         style, composition, lighting, color_palette, mood, medium, \
         tags (array of short lowercase english strings)). \
         \(PromptGuidelines.languageRules)
+        \(PromptGuidelines.cameraRules)
         \(PromptGuidelines.poseRules)
         \(PromptGuidelines.styleRules)
         """

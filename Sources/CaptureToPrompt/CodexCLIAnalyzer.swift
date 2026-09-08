@@ -19,6 +19,7 @@ struct CodexCLIAnalyzer {
     (object with keys: subject, style, composition, lighting, color_palette, mood, \
     medium, tags (array of short lowercase english strings)). \
     \(PromptGuidelines.languageRules)
+    \(PromptGuidelines.cameraRules)
     \(PromptGuidelines.poseRules)
     \(PromptGuidelines.styleRules)
     """

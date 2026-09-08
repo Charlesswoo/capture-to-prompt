@@ -16,6 +16,7 @@ struct PromptAnalyzer {
     (English, Korean, Japanese). Also fill in the structured breakdown fields. \
     Keep tags short (1-3 words each, English, lowercase). \
     \(PromptGuidelines.languageRules)
+    \(PromptGuidelines.cameraRules)
     \(PromptGuidelines.poseRules)
     \(PromptGuidelines.styleRules)
     """
@@ -34,7 +35,8 @@ struct PromptAnalyzer {
                              "description": PromptGuidelines.poseFieldDescription],
                     "style": ["type": "string",
                               "description": PromptGuidelines.styleFieldDescription],
-                    "composition": ["type": "string"],
+                    "composition": ["type": "string",
+                                    "description": PromptGuidelines.compositionFieldDescription],
                     "lighting": ["type": "string"],
                     "color_palette": ["type": "string"],
                     "mood": ["type": "string"],
