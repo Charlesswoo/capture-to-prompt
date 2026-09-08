@@ -209,6 +209,10 @@ struct ContentView: View {
                 emptyState
             }
 
+            // 히스토리를 보는 동안에도 대기 중인 캡처를 잊지 않도록
+            if appState.hasPendingCapture && appState.analysis != nil {
+                pendingCaptureBanner
+            }
             if let update = appState.availableUpdate {
                 updateBanner(update)
             }
@@ -230,6 +234,7 @@ struct ContentView: View {
         .animation(.smooth(duration: 0.3), value: appState.currentImageData)
         .animation(.smooth(duration: 0.25), value: appState.availableUpdate)
         .animation(.smooth(duration: 0.25), value: appState.updateNotice)
+        .animation(.smooth(duration: 0.25), value: appState.hasPendingCapture)
         .onDrop(of: [.fileURL, .image], isTargeted: $isDropTargeted) { providers in
             handleDrop(providers)
         }
@@ -398,6 +403,34 @@ struct ContentView: View {
 
     private func updateSizeText(_ update: UpdateChecker.Release) -> String {
         ByteCountFormatter.string(fromByteCount: update.byteSize, countStyle: .file)
+    }
+
+    /// 분석을 기다리는 캡처가 있음을 알린다 — 아직 히스토리에 없어서 잊으면 잃는다.
+    private var pendingCaptureBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "photo.badge.checkmark")
+                .foregroundStyle(.orange)
+            Text("캡처한 이미지가 분석을 기다리고 있습니다")
+                .font(.callout)
+            Spacer(minLength: 0)
+            Button("보기") {
+                appState.showPendingCapture()
+            }
+            .buttonStyle(.glass)
+            .controlSize(.small)
+            .help("대기 중인 캡처 화면으로 돌아갑니다")
+            Button("분석 시작") {
+                appState.analyzePending()
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.small)
+            .help("이 캡처의 프롬프트를 뽑습니다 — 다른 분석과 함께 진행됩니다")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .glassEffect(.regular.tint(.orange.opacity(0.12)), in: .rect(cornerRadius: 12))
+        .padding([.horizontal, .bottom], 14)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
     /// 안내 배너 — 오류가 아닌 소식("최신 버전입니다" 등)에 쓴다.

@@ -742,4 +742,48 @@ final class AppStateTests: XCTestCase {
         XCTAssertTrue(appState.isAnalyzingForeground, "남은 분석의 진행 표시가 사라짐")
         XCTAssertEqual(appState.runningAnalysisCount, 1)
     }
+
+    // MARK: - 분석 중 캡처한 이미지 유실 (2026-09-08 사용자 리포트)
+
+    /// 히스토리 항목을 열어봤다고 대기 중인 캡처가 사라지면 안 된다.
+    /// (아직 분석 전이라 히스토리에도 없어서, 지워지면 되찾을 길이 없다)
+    func testPendingCaptureSurvivesHistoryBrowsing() async throws {
+        appState.autoAnalyzeOnCapture = false
+        await appState.handleCaptured(rawImageData: try tinyPNG())
+        XCTAssertNotNil(appState.pendingImageData)
+
+        let item = store.add(analysis: sampleAnalysis, imageData: try tinyPNG(),
+                             fileExtension: "png")
+        appState.show(item)
+
+        XCTAssertNotNil(appState.pendingImageData, "히스토리를 열자 대기 캡처가 사라짐")
+        XCTAssertTrue(appState.hasPendingCapture)
+    }
+
+    /// 대기 중인 캡처로 돌아갈 수 있어야 한다.
+    func testReturnToPendingCapture() async throws {
+        appState.autoAnalyzeOnCapture = false
+        let png = try tinyPNG()
+        await appState.handleCaptured(rawImageData: png)
+        let item = store.add(analysis: sampleAnalysis, imageData: png, fileExtension: "png")
+        appState.show(item)
+        XCTAssertNotNil(appState.analysis)
+
+        appState.showPendingCapture()
+
+        XCTAssertNil(appState.analysis, "대기 캡처 화면으로 돌아가야 한다")
+        XCTAssertNotNil(appState.currentImageData)
+        XCTAssertNil(appState.currentHistoryID)
+    }
+
+    /// 새 캡처로 시작하면 대기 상태도 정리된다.
+    func testStartNewCaptureClearsPending() async throws {
+        appState.autoAnalyzeOnCapture = false
+        await appState.handleCaptured(rawImageData: try tinyPNG())
+
+        appState.startNewCapture()
+
+        XCTAssertNil(appState.pendingImageData)
+        XCTAssertFalse(appState.hasPendingCapture)
+    }
 }

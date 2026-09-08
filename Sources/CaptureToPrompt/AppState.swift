@@ -307,6 +307,19 @@ final class AppState: ObservableObject {
         pendingImageData = normalized.data
     }
 
+    /// 분석을 기다리는 캡처가 있는지 (히스토리에 아직 없는 이미지).
+    var hasPendingCapture: Bool { pendingImageData != nil }
+
+    /// 대기 중인 캡처 화면으로 돌아간다.
+    func showPendingCapture() {
+        guard let pending = pendingImageData else { return }
+        currentImageData = pending
+        analysis = nil
+        clearGeneratedImages()
+        currentHistoryID = nil
+        errorMessage = nil
+    }
+
     /// '분석 시작' 버튼: 대기 중인 캡처 이미지를 분석한다.
     func analyzePending() {
         guard let pending = pendingImageData else { return }
@@ -381,7 +394,8 @@ final class AppState: ObservableObject {
         analysis = latest.analysis
         currentImageData = try? Data(contentsOf: history.imageURL(for: item))
         errorMessage = nil
-        pendingImageData = nil
+        // 대기 중인 캡처는 남겨 둔다 — 분석 전이라 히스토리에 없고,
+        // 여기서 지우면 되찾을 방법이 없다 (배너로 돌아갈 수 있게 한다)
         currentHistoryID = item.id
         loadGeneratedImages(for: item.id)
     }
