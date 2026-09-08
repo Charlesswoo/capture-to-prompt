@@ -58,6 +58,16 @@ final class CLIIntegrationTests: XCTestCase {
         XCTAssertGreaterThan(Double(ja) / Double(en), 0.3,
                              "일본어가 영어의 30% 미만 — 내용 누락 의심")
 
+        // E2E_DUMP를 주면 결과 전문을 파일로 남긴다 (언어 간 내용 대조용)
+        if let dump = ProcessInfo.processInfo.environment["E2E_DUMP"] {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .withoutEscapingSlashes]
+            if let data = try? encoder.encode(analysis) {
+                try? data.write(to: URL(fileURLWithPath: dump))
+                print("E2E dump → \(dump)")
+            }
+        }
+
         print("E2E OK — subject: \(analysis.breakdown.subject)")
         print("E2E OK — style : \(style)")
         print("E2E OK — medium: \(analysis.breakdown.medium)")
