@@ -703,4 +703,43 @@ final class AppStateTests: XCTestCase {
         // 화면 탭과 무관하게 생성에 쓸 기본 언어는 영어
         XCTAssertEqual(defaultGenerationLanguage, .english)
     }
+
+    // MARK: - 캡처 두 건 동시 분석 (2026-09-08 사용자 버그 리포트)
+
+    /// 두 캡처를 잇따라 분석하면 화면은 나중 것을 기다린다.
+    /// 먼저 시작한 분석이 끝났다고 해서 화면을 가로채면 안 된다.
+    func testEarlierForegroundAnalysisDoesNotHijackLaterOne() {
+        let first = appState.beginAnalysis(sourceHistoryID: nil, takesOverScreen: true)
+        let second = appState.beginAnalysis(sourceHistoryID: nil, takesOverScreen: true)
+
+        XCTAssertFalse(appState.shouldPresentResult(of: first),
+                       "먼저 시작한 분석이 나중 캡처의 화면을 빼앗음")
+        XCTAssertTrue(appState.shouldPresentResult(of: second))
+    }
+
+    /// 나중 분석이 먼저 끝나 화면을 채운 뒤라도, 앞선 분석은 화면을 되찾지 않는다.
+    func testEarlierAnalysisStaysBackgroundAfterLaterOneFinishes() {
+        let first = appState.beginAnalysis(sourceHistoryID: nil, takesOverScreen: true)
+        let second = appState.beginAnalysis(sourceHistoryID: nil, takesOverScreen: true)
+
+        appState.finishAnalysis(second)
+        XCTAssertFalse(appState.shouldPresentResult(of: first))
+    }
+
+    /// 한 건만 돌 때는 종전대로 결과가 화면에 나온다.
+    func testSingleForegroundAnalysisPresentsResult() {
+        let job = appState.beginAnalysis(sourceHistoryID: nil, takesOverScreen: true)
+        XCTAssertTrue(appState.shouldPresentResult(of: job))
+    }
+
+    /// 두 건이 동시에 도는 동안 진행 표시는 유지된다.
+    func testProgressRemainsWhileSecondAnalysisRuns() {
+        let first = appState.beginAnalysis(sourceHistoryID: nil, takesOverScreen: true)
+        _ = appState.beginAnalysis(sourceHistoryID: nil, takesOverScreen: true)
+
+        appState.finishAnalysis(first)
+
+        XCTAssertTrue(appState.isAnalyzingForeground, "남은 분석의 진행 표시가 사라짐")
+        XCTAssertEqual(appState.runningAnalysisCount, 1)
+    }
 }

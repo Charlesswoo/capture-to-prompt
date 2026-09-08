@@ -263,6 +263,13 @@
   **E2E 실측**(86초): "Camera sits just above eye level, tilted slightly down for a mild high
   angle onto the leaning figure; close-to-medium shooting distance with waist-up framing…"
   앵글 표현이 없으면 실패하는 assertion 추가. 테스트 169개 통과
+- [x] **캡처 두 건을 동시에 분석하면 앞 작업이 사라지던 버그** (2026-09-08 사용자 리포트) —
+  `shouldPresentResult`가 화면을 점유한 분석이면 **무조건 결과를 표시**해서, 먼저 시작한
+  분석이 끝날 때 나중 캡처가 기다리던 화면을 가로챘다.
+  → `foregroundAnalysisID`로 **화면의 주인**을 추적 — 캡처를 잇따라 걸면 마지막 것이 주인이
+  되고, 앞서 걸린 분석이 먼저 끝나도 화면을 빼앗지 않는다(결과는 히스토리에만 추가).
+  분석 중 화면에 "총 N건 진행 중" 표시를 더해 나머지 작업의 행방을 알 수 있게 했다.
+  테스트 4건으로 재현·검증(173개 통과)
 - [x] 실캡처 검증: 자동 분석 off "분석 대기" 화면, 메타 접힘+연필 버튼, 좁아진 사이드바
 - [ ] 실캡처 검증 잔여(합성 클릭 중단 — 사용자 기기 사용 중): 분석 시작 버튼 실행 흐름,
   연필 편집 모드 화면, 메타 펼침, 설정 토글 화면 — 직접 사용하며 확인 권장

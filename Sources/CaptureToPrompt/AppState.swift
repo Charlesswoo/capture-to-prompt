@@ -127,6 +127,9 @@ final class AppState: ObservableObject {
     /// 지금 이미지 생성이 돌고 있는 히스토리 항목들 — 항목마다 따로 걸 수 있다.
     @Published private(set) var generatingHistoryIDs: Set<UUID> = []
     private var generationStartedAtByID: [UUID: Date] = [:]
+    /// 지금 화면을 차지한 분석. 캡처를 잇따라 걸면 마지막 것이 화면의 주인이 되고,
+    /// 앞서 걸린 분석이 먼저 끝나도 화면을 빼앗지 않는다.
+    private var foregroundAnalysisID: UUID?
     /// 자동 분석 off일 때 캡처만 해두고 '분석 시작'을 기다리는 이미지.
     @Published var pendingImageData: Data?
     /// 현재 화면의 분석이 히스토리 어느 항목에서 왔는지 — 프롬프트 수정 반영용.
@@ -432,18 +435,23 @@ final class AppState: ObservableObject {
                               sourceHistoryID: sourceHistoryID,
                               takesOverScreen: takesOverScreen)
         runningAnalyses[job.id] = job
+        if takesOverScreen { foregroundAnalysisID = job.id }
         return job
     }
 
     func finishAnalysis(_ job: AnalysisJob) {
         runningAnalyses[job.id] = nil
+        if foregroundAnalysisID == job.id, !runningAnalyses.values.contains(where: \.takesOverScreen) {
+            foregroundAnalysisID = nil
+        }
     }
 
     /// 결과를 화면에 띄워도 되는지 — 화면을 점유했던 분석이거나,
     /// 재분석을 시작한 그 항목을 사용자가 아직 보고 있을 때만.
     /// (그 사이 다른 항목으로 옮겨갔다면 화면을 가로채지 않는다)
     func shouldPresentResult(of job: AnalysisJob) -> Bool {
-        if job.takesOverScreen { return true }
+        // 화면을 점유했더라도, 그 사이 다른 캡처가 화면의 주인이 됐으면 물러난다
+        if job.takesOverScreen { return job.id == foregroundAnalysisID }
         return job.sourceHistoryID != nil && job.sourceHistoryID == currentHistoryID
     }
 

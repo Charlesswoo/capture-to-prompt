@@ -109,6 +109,12 @@ struct ResultPane: View {
                 .controlSize(.large)
             Text("\(appState.analyzerDisplayName)가 이미지를 분석 중입니다…")
                 .font(.headline)
+            // 여러 건을 동시에 걸었을 때 나머지가 어디 갔는지 알 수 있게
+            if appState.runningAnalysisCount > 1 {
+                Text("총 \(appState.runningAnalysisCount)건 진행 중 — 끝나는 대로 히스토리에 쌓입니다")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
             if let startedAt = appState.analysisStartedAt {
                 TimelineView(.periodic(from: startedAt, by: 1)) { context in
                     let elapsed = Int(context.date.timeIntervalSince(startedAt))
