@@ -813,3 +813,80 @@ extension AppStateTests {
                       "보고 있는 항목이 분석 중이면 결과 패널도 진행 중으로 보여야 한다")
     }
 }
+
+// MARK: - 파일·클립보드 불러오기 (2026-09-09 사용자 보고: 캡처와 다르게 동작)
+
+extension AppStateTests {
+
+    /// 캡처와 같은 규칙 — 분석 전에 먼저 목록에 남겨야 한다.
+    /// 예전에는 분석이 **성공해야** 항목이 생겨서, 분석 중 다른 탭으로 옮기면
+    /// 불러온 이미지를 되찾을 방법이 없었고 분석이 실패하면 통째로 사라졌다.
+    func testImportedImageIsStoredBeforeAnalysis() throws {
+        let imported = try XCTUnwrap(appState.importImage(try tinyPNG()))
+
+        XCTAssertEqual(store.items.count, 1, "불러오는 즉시 항목이 생겨야 한다")
+        XCTAssertEqual(store.items[0].id, imported.item.id)
+        XCTAssertNil(store.items[0].analysis, "분석은 아직 붙지 않는다")
+        // 화면도 그 항목을 보고 있어야 사이드바 선택과 어긋나지 않는다
+        XCTAssertEqual(appState.currentHistoryID, imported.item.id)
+        XCTAssertNotNil(appState.currentImageData)
+        XCTAssertTrue(appState.currentItemNeedsAnalysis)
+    }
+
+    /// 이미지가 아니면 항목을 만들지 않고 오류만 알린다.
+    func testImportRejectsNonImageWithoutCreatingItem() {
+        XCTAssertNil(appState.importImage(Data("not an image".utf8)))
+        XCTAssertTrue(store.items.isEmpty)
+        XCTAssertNotNil(appState.errorMessage)
+    }
+
+    /// 읽을 수 없는 파일도 항목을 남기지 않는다.
+    func testAnalyzeFileReportsUnreadableFile() {
+        appState.analyzeFile(at: tempDir.appendingPathComponent("없는파일.png"))
+
+        XCTAssertTrue(store.items.isEmpty)
+        XCTAssertEqual(appState.errorMessage?.contains("읽을 수 없습니다"), true)
+    }
+
+    /// 분석 결과는 불러올 때 만든 항목에 붙어야 한다 — 사본이 생기면 안 된다.
+    func testAnalysisAttachesToImportedItemWithoutDuplicating() throws {
+        let imported = try XCTUnwrap(appState.importImage(try tinyPNG()))
+
+        let item = appState.attachAnalysis(sampleAnalysis, to: imported.item.id,
+                                           imageData: imported.data, mediaType: "image/png")
+
+        XCTAssertEqual(store.items.count, 1, "불러온 항목에 붙어야 한다 (사본 금지)")
+        XCTAssertEqual(item.id, imported.item.id)
+        XCTAssertEqual(store.items[0].analysis, sampleAnalysis)
+    }
+
+    /// 대상 항목이 없으면(재분석·생성본 추출) 새로 만든다.
+    func testAnalysisWithoutTargetCreatesNewItem() throws {
+        let item = appState.attachAnalysis(sampleAnalysis, to: nil,
+                                           imageData: try tinyPNG(), mediaType: "image/png")
+
+        XCTAssertEqual(store.items.count, 1)
+        XCTAssertEqual(store.items[0].id, item.id)
+        XCTAssertEqual(store.items[0].analysis, sampleAnalysis)
+    }
+
+    /// 그 사이 대상 항목이 삭제됐어도 결과를 잃지 않는다.
+    func testAnalysisFallsBackToNewItemWhenTargetVanished() throws {
+        let imported = try XCTUnwrap(appState.importImage(try tinyPNG()))
+        store.delete(imported.item)
+
+        let item = appState.attachAnalysis(sampleAnalysis, to: imported.item.id,
+                                           imageData: imported.data, mediaType: "image/png")
+
+        XCTAssertEqual(store.items.count, 1, "사라진 항목 대신 새로 만들어 결과를 남긴다")
+        XCTAssertEqual(store.items[0].id, item.id)
+    }
+
+    /// 확장자는 실제 포맷을 따라야 한다 (webp/gif를 .jpg로 저장하지 않는다).
+    func testStoredFileExtensionFollowsMediaType() {
+        XCTAssertEqual(AppState.fileExtension(for: "image/png"), "png")
+        XCTAssertEqual(AppState.fileExtension(for: "image/jpeg"), "jpg")
+        XCTAssertEqual(AppState.fileExtension(for: "image/webp"), "webp")
+        XCTAssertEqual(AppState.fileExtension(for: "image/gif"), "gif")
+    }
+}

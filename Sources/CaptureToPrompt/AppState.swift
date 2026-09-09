@@ -298,7 +298,7 @@ final class AppState: ObservableObject {
             errorMessage = "클립보드에 이미지가 없습니다."
             return
         }
-        Task { await analyze(rawImageData: data) }
+        analyzeImported(data)
     }
 
     /// 파일/드롭 이미지 분석.
@@ -307,7 +307,32 @@ final class AppState: ObservableObject {
             errorMessage = "파일을 읽을 수 없습니다: \(url.lastPathComponent)"
             return
         }
-        Task { await analyze(rawImageData: data) }
+        analyzeImported(data)
+    }
+
+    /// 들어온 이미지를 항목으로 보관하고 화면에 띄운다 (분석은 아직 붙이지 않는다).
+    /// 이미지가 아니면 항목을 만들지 않고 오류만 알린다.
+    @discardableResult
+    func importImage(_ rawImageData: Data) -> (item: HistoryItem, data: Data)? {
+        errorMessage = nil
+        guard let normalized = ImageProcessor.normalize(rawImageData) else {
+            errorMessage = AnalyzerError.invalidImage.localizedDescription
+            return nil
+        }
+        let item = store(normalized)
+        show(item)
+        return (item, normalized.data)
+    }
+
+    /// 사용자가 이미 본 이미지(파일·클립보드·드롭·생성본)를 바로 분석한다.
+    /// 캡처와 마찬가지로 **항목을 먼저 만든다** — 분석 중 다른 항목으로 옮겨가도
+    /// 사이드바에서 되찾을 수 있고, 분석이 실패해도 이미지가 남는다.
+    func analyzeImported(_ rawImageData: Data) {
+        guard let imported = importImage(rawImageData) else { return }
+        Task {
+            await analyze(rawImageData: imported.data, sourceHistoryID: imported.item.id,
+                          targetHistoryID: imported.item.id)
+        }
     }
 
     /// 캡처 결과 공통 진입점: 옵션에 따라 바로 분석하거나, 이미지만 띄우고 대기한다.
@@ -329,8 +354,19 @@ final class AppState: ObservableObject {
 
     /// 정규화한 이미지를 히스토리에 보관한다 (분석 전).
     private func store(_ normalized: (data: Data, mediaType: String)) -> HistoryItem {
-        let ext = normalized.mediaType == "image/png" ? "png" : "jpg"
-        return history.add(imageData: normalized.data, fileExtension: ext)
+        history.add(imageData: normalized.data,
+                    fileExtension: Self.fileExtension(for: normalized.mediaType))
+    }
+
+    /// 저장 파일 확장자 — 실제 포맷을 따른다.
+    /// (파일 열기로는 webp·gif도 들어오므로 전부 .jpg로 적으면 내용과 어긋난다)
+    static func fileExtension(for mediaType: String) -> String {
+        switch mediaType {
+        case "image/png": return "png"
+        case "image/webp": return "webp"
+        case "image/gif": return "gif"
+        default: return "jpg"
+        }
     }
 
     /// 보고 있는 항목이 지금 분석 중인지 (결과 패널 스피너 조건).
@@ -421,17 +457,9 @@ final class AppState: ObservableObject {
                 result = try await analyzer.analyze(imageData: normalized.data,
                                                     mediaType: normalized.mediaType)
             }
-            // 캡처 때 만들어 둔 항목이 있으면 거기에 분석을 붙이고, 없으면 새로 만든다
-            let item: HistoryItem
-            if let target = targetHistoryID,
-               let existing = history.items.first(where: { $0.id == target }) {
-                history.update(id: target, analysis: result)
-                item = existing
-            } else {
-                let ext = normalized.mediaType == "image/png" ? "png" : "jpg"
-                item = history.add(imageData: normalized.data, fileExtension: ext,
-                                   analysis: result)
-            }
+            let item = attachAnalysis(result, to: targetHistoryID,
+                                      imageData: normalized.data,
+                                      mediaType: normalized.mediaType)
             // (히스토리에는 이미 있으므로 사이드바에서 바로 열 수 있다)
             PromptLog.record(PromptLogEntry(
                 kind: .analyze, outcome: .ok, since: startedAt,
@@ -452,6 +480,22 @@ final class AppState: ObservableObject {
                 imageSize: ImageProcessor.pixelSize(normalized.data)))
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// 분석 결과를 대상 항목에 붙인다.
+    /// 캡처·파일로 미리 만들어 둔 항목이 있으면 거기에 붙이고(사본 금지),
+    /// 없거나 그 사이 삭제됐으면 새로 만들어 결과를 잃지 않는다.
+    @discardableResult
+    func attachAnalysis(_ result: PromptAnalysis, to targetHistoryID: UUID?,
+                        imageData: Data, mediaType: String) -> HistoryItem {
+        if let target = targetHistoryID,
+           let existing = history.items.first(where: { $0.id == target }) {
+            history.update(id: target, analysis: result)
+            return existing
+        }
+        return history.add(imageData: imageData,
+                           fileExtension: Self.fileExtension(for: mediaType),
+                           analysis: result)
     }
 
     /// 로그에 남길 백엔드별 분석 지시문 — 실제 호출과 같은 문안이어야
@@ -979,7 +1023,7 @@ final class AppState: ObservableObject {
     /// 결과는 별도 히스토리 항목이 된다 (원본 분석은 그대로 남는다).
     func extractPromptFromSelection() {
         guard let data = selectedGeneratedImage else { return }
-        Task { await analyze(rawImageData: data) }
+        analyzeImported(data)
     }
 
     private static func tiffToPNG(_ tiff: Data) -> Data? {

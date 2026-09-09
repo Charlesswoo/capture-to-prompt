@@ -476,7 +476,8 @@ struct ContentView: View {
         if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
             provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
                 if let data {
-                    Task { @MainActor in await appState.analyze(rawImageData: data) }
+                    // 파일 드롭과 같은 경로 — 항목을 먼저 만들고 분석을 붙인다
+                    Task { @MainActor in appState.analyzeImported(data) }
                 }
             }
             return true
