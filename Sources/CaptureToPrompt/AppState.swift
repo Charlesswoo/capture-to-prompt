@@ -333,9 +333,23 @@ final class AppState: ObservableObject {
         return history.add(imageData: normalized.data, fileExtension: ext)
     }
 
-    /// 보고 있는 항목이 아직 분석되지 않았는지 ('분석 시작' 화면 조건).
+    /// 보고 있는 항목이 지금 분석 중인지 (결과 패널 스피너 조건).
+    /// 화면을 점유한 분석뿐 아니라, 사이드바에서 시작해 뒤에서 도는 분석도 포함한다 —
+    /// 그 항목을 보고 있다면 진행 중이라고 알려줘야 한다.
+    var isAnalyzingCurrentItem: Bool {
+        isAnalyzingForeground || isAnalyzing(for: currentHistoryID)
+    }
+
+    /// 보고 있는 항목이 아직 분석되지 않았고, 지금 분석 중도 아닌지
+    /// ('분석 시작' 화면 조건).
+    ///
+    /// **이 항목이 분석 중인지**를 함께 봐야 한다. 예전에는 보지 않아서 사이드바는
+    /// 스피너를, 결과 패널은 '분석 시작' 버튼을 동시에 보여줬고, 그 버튼은
+    /// `analyzePending()`의 중복 실행 가드에 막혀 눌러도 아무 일이 없었다.
+    /// 반대로 **다른** 항목의 분석 때문에 가려서도 안 된다 (병렬 분석의 취지).
     var currentItemNeedsAnalysis: Bool {
         analysis == nil && currentImageData != nil && currentHistoryID != nil
+            && !isAnalyzing(for: currentHistoryID)
     }
 
     /// '분석 시작' 버튼: 보고 있는(아직 분석 안 된) 항목의 프롬프트를 뽑는다.

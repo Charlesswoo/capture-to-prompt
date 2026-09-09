@@ -38,15 +38,16 @@ struct ResultPane: View {
             if let analysis = appState.analysis {
                 resultView(analysis)
             } else if appState.currentItemNeedsAnalysis {
-                // 다른 분석이 도는 중이어도 이 항목의 '분석 시작'은 가리지 않는다
+                // 다른 항목의 분석이 도는 중이어도 이 항목의 '분석 시작'은 가리지 않는다
+                // (이 항목 자신이 분석 중이면 currentItemNeedsAnalysis가 false가 된다)
                 pendingView
-            } else if appState.isAnalyzing {
+            } else if appState.isAnalyzingCurrentItem {
                 analyzingView
             } else {
                 placeholder
             }
         }
-        .animation(.smooth(duration: 0.3), value: appState.isAnalyzing)
+        .animation(.smooth(duration: 0.3), value: appState.isAnalyzingCurrentItem)
         .confirmationDialog("이 항목의 생성 이미지를 모두 삭제할까요?",
                             isPresented: $confirmDeleteAll, titleVisibility: .visible) {
             Button("\(appState.currentGeneratedImageCount)장 삭제", role: .destructive) {
@@ -205,7 +206,7 @@ struct ResultPane: View {
     private func normalResultView(_ analysis: PromptAnalysis) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             // 이 항목을 다시 분석 중이거나, 화면을 점유한 새 분석이 도는 중임을 알린다
-            if appState.isAnalyzing || appState.isAnalyzing(for: appState.currentHistoryID) {
+            if appState.isAnalyzingCurrentItem {
                 HStack(spacing: 8) {
                     ProgressView()
                         .controlSize(.small)

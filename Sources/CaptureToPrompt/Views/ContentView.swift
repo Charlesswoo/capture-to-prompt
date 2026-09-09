@@ -194,7 +194,7 @@ struct ContentView: View {
                     .padding(20)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .transition(.opacity.combined(with: .scale(scale: 0.97)))
-            } else if appState.analysis != nil || appState.isAnalyzing {
+            } else if appState.analysis != nil || appState.isAnalyzingCurrentItem {
                 // 분석은 있는데 원본 이미지 파일이 없는 경우 (온보딩과 구분)
                 VStack(spacing: 10) {
                     Image(systemName: "photo.badge.exclamationmark")

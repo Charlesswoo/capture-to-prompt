@@ -762,3 +762,54 @@ final class AppStateTests: XCTestCase {
         XCTAssertEqual(appState.runningAnalysisCount, 0)
     }
 }
+
+// MARK: - 사이드바와 결과 패널의 분석 상태 일치 (2026-09-09 사용자 보고)
+
+extension AppStateTests {
+
+    /// 보고 있는 항목이 분석 중이면 '분석 시작' 화면을 띄우면 안 된다.
+    /// 사이드바는 `isAnalyzing(for:)`로 스피너를 띄우는데 결과 패널만 버튼을 보여
+    /// 상태가 어긋났다. 게다가 그 버튼은 `analyzePending()`의 가드에 막혀 눌러도
+    /// 아무 일도 일어나지 않는 죽은 버튼이었다.
+    func testCurrentItemNeedsAnalysisIsFalseWhileThatItemIsAnalyzing() throws {
+        let item = store.add(imageData: Data([1, 2, 3]), fileExtension: "png")
+        appState.show(item)
+        XCTAssertTrue(appState.currentItemNeedsAnalysis, "분석 전에는 버튼이 보여야 한다")
+
+        let job = appState.beginAnalysis(sourceHistoryID: item.id, takesOverScreen: false)
+
+        XCTAssertTrue(appState.isAnalyzing(for: item.id), "사이드바는 분석 중으로 본다")
+        XCTAssertFalse(appState.currentItemNeedsAnalysis,
+                       "같은 항목이 분석 중인데 '분석 시작'을 띄우면 사이드바와 어긋난다")
+
+        appState.finishAnalysis(job)
+        XCTAssertTrue(appState.currentItemNeedsAnalysis, "끝나면 다시 시작할 수 있어야 한다")
+    }
+
+    /// 반대로 **다른** 항목이 분석 중인 것 때문에 가려지면 안 된다 —
+    /// 병렬 분석을 넣은 이유가 그것이다.
+    func testCurrentItemNeedsAnalysisStaysTrueWhileAnotherItemIsAnalyzing() throws {
+        let mine = store.add(imageData: Data([1, 2, 3]), fileExtension: "png")
+        let other = store.add(imageData: Data([4, 5, 6]), fileExtension: "png")
+        appState.show(mine)
+
+        appState.beginAnalysis(sourceHistoryID: other.id, takesOverScreen: true)
+
+        XCTAssertFalse(appState.isAnalyzing(for: mine.id))
+        XCTAssertTrue(appState.currentItemNeedsAnalysis,
+                      "남의 분석 때문에 내 '분석 시작'이 막히면 병렬 분석이 무의미하다")
+    }
+
+    /// 결과 패널이 스피너를 띄울 조건 — 화면을 점유하지 않은 분석(사이드바에서 시작)도
+    /// 그 항목을 보고 있으면 스피너로 보여야 한다.
+    func testShowsSpinnerForBackgroundAnalysisOfCurrentItem() throws {
+        let item = store.add(imageData: Data([1, 2, 3]), fileExtension: "png")
+        appState.show(item)
+
+        appState.beginAnalysis(sourceHistoryID: item.id, takesOverScreen: false)
+
+        XCTAssertFalse(appState.isAnalyzing, "화면 점유 분석은 없다")
+        XCTAssertTrue(appState.isAnalyzingCurrentItem,
+                      "보고 있는 항목이 분석 중이면 결과 패널도 진행 중으로 보여야 한다")
+    }
+}

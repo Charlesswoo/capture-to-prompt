@@ -134,7 +134,9 @@ struct HistorySidebar: View {
                     NSPasteboard.general.setString(analysis.promptKo, forType: .string)
                 }
             } else {
+                // 이미 도는 중이면 analyzeItem이 무시하므로 눌리지 않게 막는다
                 Button("분석 시작") { appState.analyzeItem(item) }
+                    .disabled(appState.isAnalyzing(for: item.id))
             }
             // 보고 있지 않은 항목의 생성본도 여기서 정리할 수 있다
             if !item.generatedImageFileNames.isEmpty {
