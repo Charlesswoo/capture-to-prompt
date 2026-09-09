@@ -1057,6 +1057,64 @@ final class AppState: ObservableObject {
         }
     }
 
+    // MARK: - 프롬프트만으로 만들기 (참고 이미지 없이)
+
+    /// 참고 이미지 없이 프롬프트만으로 만드는 중인지.
+    /// 아직 히스토리 항목이 없으므로 항목별 상태(`generatingHistoryIDs`)를 쓸 수 없다.
+    @Published private(set) var isGeneratingFromPrompt = false
+
+    func canGenerateFromPrompt(_ text: String) -> Bool {
+        !isGeneratingFromPrompt
+            && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    func beginPromptGeneration() { isGeneratingFromPrompt = true }
+    func finishPromptGeneration() { isGeneratingFromPrompt = false }
+
+    /// 아이디어를 문장으로 써서 이미지를 만든다.
+    ///
+    /// 만들어진 이미지는 그 항목의 **원본**이 된다 — 캡처와 같은 자리에 놓이므로
+    /// 이후 비교·변형·재추출이 전부 기존 경로를 그대로 탄다.
+    /// 입력한 문장은 씨앗일 뿐이고, 정확한 프롬프트는 결과 그림에서 다시 뽑는다
+    /// (그게 이 앱이 하는 일이고, 씨앗보다 결과가 정확하다). 씨앗 자체는 로그에 남는다.
+    func generateFromPrompt(_ text: String) {
+        let seed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard canGenerateFromPrompt(seed) else { return }
+        errorMessage = nil
+        beginPromptGeneration()
+        let startedAt = Date()
+        Task {
+            defer { finishPromptGeneration() }
+            let engine = ImageGenEngine(rawValue: imageGenEngine) ?? .codexCLI
+            do {
+                let data: Data
+                switch engine {
+                case .codexCLI:
+                    data = try await CodexImageGenerator().generate(prompt: seed,
+                                                                    referenceImage: nil)
+                case .openAIAPI:
+                    data = try await ImageGenerator(baseURL: imageGenBaseURL,
+                                                    apiKey: resolvedImageGenKey,
+                                                    model: imageGenModel)
+                        .generate(prompt: seed, referenceImage: nil)
+                }
+                PromptLog.record(PromptLogEntry(
+                    kind: .generate, outcome: .ok, since: startedAt,
+                    backend: engine.logName, prompt: seed,
+                    response: "image \(data.count) bytes",
+                    imageSize: ImageProcessor.pixelSize(data), note: "source=prompt_only"))
+                // 결과를 원본으로 삼아 항목을 만들고, 곧바로 정확한 프롬프트를 뽑는다
+                analyzeImported(data)
+            } catch {
+                PromptLog.record(PromptLogEntry(
+                    kind: .generate, outcome: PromptLogEntry.Outcome(error), since: startedAt,
+                    backend: engine.logName, prompt: seed,
+                    error: error.localizedDescription, note: "source=prompt_only"))
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
     /// 보고 있는 생성본을 새 입력 이미지로 삼아 프롬프트를 다시 뽑는다.
     /// 결과는 별도 히스토리 항목이 된다 (원본 분석은 그대로 남는다).
     func extractPromptFromSelection() {

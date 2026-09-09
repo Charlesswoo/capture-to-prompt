@@ -31,6 +31,9 @@ struct ResultPane: View {
         }
     }
 
+    /// 참고 이미지 없이 만들 때 입력하는 씨앗 문장.
+    @State private var seedPrompt = ""
+
     var body: some View {
         Group {
             // 분석 중이라도 히스토리에서 불러온 결과가 있으면 그걸 우선 보여준다
@@ -69,12 +72,69 @@ struct ResultPane: View {
 
     // MARK: - 상태별 뷰
 
+    /// 아무것도 열지 않은 상태 — 이미지를 분석하거나, 참고 이미지 없이
+    /// 프롬프트만으로 만들어 시작할 수 있다.
     private var placeholder: some View {
-        ContentUnavailableView {
-            Label("분석 결과 없음", systemImage: "text.below.photo")
-        } description: {
-            Text("이미지를 분석하면 3개 언어 프롬프트와 구조 분석이 여기에 표시됩니다")
+        VStack(spacing: 18) {
+            VStack(spacing: 6) {
+                Image(systemName: "text.below.photo")
+                    .font(.system(size: 34, weight: .light))
+                    .foregroundStyle(.secondary)
+                Text("분석 결과 없음")
+                    .font(.headline)
+                Text("이미지를 분석하면 3개 언어 프롬프트와 구조 분석이 여기에 표시됩니다")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            Divider().frame(maxWidth: 220)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("참고 이미지 없이 만들기")
+                    .font(.callout.weight(.medium))
+                TextEditor(text: $seedPrompt)
+                    .font(.callout)
+                    .frame(height: 76)
+                    .padding(6)
+                    .background(.quaternary.opacity(0.35), in: .rect(cornerRadius: 8))
+                    .overlay(alignment: .topLeading) {
+                        if seedPrompt.isEmpty {
+                            Text("만들고 싶은 장면을 문장으로 쓰세요")
+                                .font(.callout)
+                                .foregroundStyle(.tertiary)
+                                .padding(.horizontal, 11)
+                                .padding(.vertical, 14)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                HStack {
+                    Text("만든 그림에서 프롬프트를 다시 뽑아 3개 언어로 채웁니다")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
+                    Button {
+                        // 입력은 지우지 않는다 — 실패하면 고쳐서 다시 걸어야 하고,
+                        // 성공하면 결과 화면으로 바뀌어 이 입력창이 사라진다
+                        appState.generateFromPrompt(seedPrompt)
+                    } label: {
+                        if appState.isGeneratingFromPrompt {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text("만드는 중…")
+                            }
+                        } else {
+                            Label("만들기", systemImage: "sparkles")
+                        }
+                    }
+                    .buttonStyle(.glassProminent)
+                    .disabled(!appState.canGenerateFromPrompt(seedPrompt))
+                }
+            }
+            .frame(maxWidth: 380)
         }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// 자동 분석 off: 캡처 이미지를 확인한 뒤 수동으로 분석을 시작하는 화면.

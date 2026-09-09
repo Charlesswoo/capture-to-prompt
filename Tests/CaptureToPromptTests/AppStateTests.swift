@@ -985,3 +985,48 @@ extension AppStateTests {
         XCTAssertNil(appState.currentIdentifierForCopy)
     }
 }
+
+// MARK: - 프롬프트만으로 생성 (2026-09-09 사용자 요청)
+
+extension AppStateTests {
+
+    /// 빈 상태에서도 프롬프트만 있으면 만들 수 있어야 한다 (참고 이미지 없이).
+    func testCanGenerateFromPromptWhenNothingIsOpen() {
+        appState.startNewCapture()
+        XCTAssertNil(appState.analysis)
+        XCTAssertNil(appState.currentHistoryID)
+
+        XCTAssertTrue(appState.canGenerateFromPrompt("잔잔한 바다 위의 등대, 수채화"))
+    }
+
+    /// 빈 문장으로는 만들지 않는다 (공백만 있는 경우 포함).
+    func testBlankPromptIsRejected() {
+        XCTAssertFalse(appState.canGenerateFromPrompt(""))
+        XCTAssertFalse(appState.canGenerateFromPrompt("   \n  "))
+    }
+
+    /// 이미 만드는 중이면 또 걸지 않는다 (중복 실행 방지).
+    func testCannotStartSecondPromptGenerationWhileRunning() {
+        appState.beginPromptGeneration()
+        XCTAssertTrue(appState.isGeneratingFromPrompt)
+        XCTAssertFalse(appState.canGenerateFromPrompt("무언가"))
+
+        appState.finishPromptGeneration()
+        XCTAssertTrue(appState.canGenerateFromPrompt("무언가"))
+    }
+
+    /// 생성된 이미지가 그 항목의 **원본**이 된다 — 이후 비교·변형·재추출이
+    /// 캡처와 똑같은 경로를 타게 하기 위해서다.
+    func testGeneratedImageBecomesTheItemsOriginal() throws {
+        let png = try tinyPNG()
+
+        let imported = try XCTUnwrap(appState.importImage(png))
+
+        XCTAssertEqual(store.items.count, 1)
+        XCTAssertEqual(appState.currentHistoryID, imported.item.id)
+        XCTAssertNotNil(appState.originalImageData(for: store.items[0]),
+                        "원본으로 읽을 수 있어야 변형·재추출이 동작한다")
+        XCTAssertTrue(appState.generatedImages.isEmpty,
+                      "씨앗 프롬프트로 만든 첫 장은 생성본이 아니라 원본이다")
+    }
+}
