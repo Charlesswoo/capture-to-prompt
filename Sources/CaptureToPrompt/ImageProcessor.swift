@@ -8,6 +8,18 @@ import UniformTypeIdentifiers
 enum ImageProcessor {
     static let maxDimension: CGFloat = 1568
 
+    /// 이미지의 픽셀 크기 ("1024x1536"). 로그에 남겨 원본과 생성 결과의 화면비가
+    /// 실제로 맞았는지 나중에 셀 수 있게 한다 (실측 없이 프롬프트를 고치지 않도록).
+    static func pixelSize(_ data: Data) -> String? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = props[kCGImagePropertyPixelWidth] as? Int,
+              let height = props[kCGImagePropertyPixelHeight] as? Int else {
+            return nil
+        }
+        return "\(width)x\(height)"
+    }
+
     /// API에 보낼 (데이터, media_type) 쌍으로 정규화한다.
     /// 이미 작으면 원본 유지(포맷이 지원되는 경우), 크면 JPEG로 다운스케일.
     static func normalize(_ data: Data) -> (data: Data, mediaType: String)? {

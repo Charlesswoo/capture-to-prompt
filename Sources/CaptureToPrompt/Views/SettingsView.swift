@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -20,6 +21,16 @@ struct SettingsView: View {
     @AppStorage("hotKeyPreset") private var hotKeyPreset = HotKeyManager.defaultPreset.rawValue
     @AppStorage("windowOpacity") private var windowOpacity = 0.85
     @AppStorage("autoAnalyzeOnCapture") private var autoAnalyzeOnCapture = false
+    @AppStorage(PromptLog.defaultsKey) private var promptLogEnabled = true
+    /// 기록을 지운 뒤 크기 표시를 다시 계산시키기 위한 토큰.
+    @State private var promptLogSizeToken = UUID()
+
+    private var promptLogSizeText: String {
+        _ = promptLogSizeToken
+        let bytes = PromptLog.currentByteSize()
+        guard bytes > 0 else { return "없음" }
+        return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
 
     var body: some View {
         Form {
@@ -157,6 +168,33 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            Section("프롬프트 로그") {
+                Toggle("프롬프트 실행 기록 남기기", isOn: $promptLogEnabled)
+                HStack {
+                    Text("기록 크기")
+                    Spacer()
+                    Text(promptLogSizeText)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+                HStack {
+                    Button("로그 폴더 열기") {
+                        NSWorkspace.shared.selectFile(
+                            PromptLog.defaultFileURL().path,
+                            inFileViewerRootedAtPath: PromptLog.defaultDirectory().path)
+                    }
+                    Button("기록 지우기", role: .destructive) {
+                        PromptLog.shared.clear()
+                        promptLogSizeToken = UUID()
+                    }
+                }
+                Text("모델에 보낸 지시문과 받은 결과, 그리고 재추출·수정·삭제 같은 반응을 "
+                     + "JSONL 한 줄씩 남깁니다. 이 기기 밖으로 나가지 않으며, "
+                     + "추출 품질을 점검해 지시문을 고칠 때 씁니다.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("업데이트") {

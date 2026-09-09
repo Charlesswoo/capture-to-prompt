@@ -166,11 +166,36 @@ final class AppState: ObservableObject {
         case variation
         /// 지금 보고 있는 생성본을 새 결과로 교체.
         case replaceCurrent
+
+        var logName: String {
+            switch self {
+            case .new: return "new"
+            case .variation: return "variation"
+            case .replaceCurrent: return "replace"
+            }
+        }
     }
 
     enum ImageGenEngine: String {
         case codexCLI = "codex"  // codex image_generation — 키 불필요 (기본값)
         case openAIAPI = "api"   // OpenAI 호환 Images API — 키 필요
+
+        /// 분석 백엔드의 "codex"/"api"와 헷갈리지 않도록 로그에서는 구분해 적는다.
+        var logName: String {
+            switch self {
+            case .codexCLI: return "codex-image"
+            case .openAIAPI: return "openai-image"
+            }
+        }
+    }
+
+    /// 로그에 남길 언어 표기.
+    static func logName(_ language: PromptAnalysis.PromptLanguage) -> String {
+        switch language {
+        case .korean: return "ko"
+        case .english: return "en"
+        case .japanese: return "ja"
+        }
     }
 
     let history: HistoryStore
@@ -366,6 +391,8 @@ final class AppState: ObservableObject {
         let job = beginAnalysis(sourceHistoryID: sourceHistoryID,
                                 takesOverScreen: takesOverScreen)
         defer { finishAnalysis(job) }
+        let startedAt = Date()
+        let instructions = Self.analysisInstructions(for: selected)
         do {
             let result: PromptAnalysis
             switch selected {
@@ -391,14 +418,41 @@ final class AppState: ObservableObject {
                 item = history.add(imageData: normalized.data, fileExtension: ext,
                                    analysis: result)
             }
-            // 그 사이 사용자가 다른 항목으로 옮겨갔으면 화면을 가로채지 않는다
             // (히스토리에는 이미 있으므로 사이드바에서 바로 열 수 있다)
+            PromptLog.record(PromptLogEntry(
+                kind: .analyze, outcome: .ok, since: startedAt,
+                backend: selected.rawValue, model: Self.modelName(for: selected, apiModel: model),
+                historyID: item.id.uuidString,
+                prompt: instructions, response: result.prettyJSON(),
+                imageSize: ImageProcessor.pixelSize(normalized.data)))
+            // 그 사이 사용자가 다른 항목으로 옮겨갔으면 화면을 가로채지 않는다
             if shouldPresentResult(of: job) {
                 show(item)
             }
         } catch {
+            PromptLog.record(PromptLogEntry(
+                kind: .analyze, outcome: PromptLogEntry.Outcome(error), since: startedAt,
+                backend: selected.rawValue, model: Self.modelName(for: selected, apiModel: model),
+                historyID: (targetHistoryID ?? sourceHistoryID)?.uuidString,
+                prompt: instructions, error: error.localizedDescription,
+                imageSize: ImageProcessor.pixelSize(normalized.data)))
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// 로그에 남길 백엔드별 분석 지시문 — 실제 호출과 같은 문안이어야
+    /// 나중에 "이 지시문이 이런 결과를 냈다"를 짝지을 수 있다.
+    static func analysisInstructions(for backend: Backend) -> String {
+        switch backend {
+        case .claudeCLI: return ClaudeCLIAnalyzer.prompt(imageFileName: "input.png")
+        case .codexCLI: return CodexCLIAnalyzer.prompt
+        case .apiKey: return PromptAnalyzer.systemPrompt
+        }
+    }
+
+    /// CLI 백엔드는 모델을 우리가 고르지 않는다 (로그인된 구독이 정한다).
+    static func modelName(for backend: Backend, apiModel: String) -> String? {
+        backend == .apiKey ? apiModel : nil
     }
 
     /// 히스토리 항목을 현재 화면으로 불러온다. 그 항목에서 생성했던 이미지도 함께 되살린다.
@@ -572,13 +626,21 @@ final class AppState: ObservableObject {
         revisingHistoryIDs.insert(id)
         Task {
             defer { revisingHistoryIDs.remove(id) }
+            let startedAt = Date()
+            let request = PromptRevisionAdvisor.prompt(originalPrompt: rejection.prompt,
+                                                       rejection: rejection.detail)
             do {
-                let request = PromptRevisionAdvisor.prompt(originalPrompt: rejection.prompt,
-                                                           rejection: rejection.detail)
                 let raw = try await completeText(request)
                 revisions[id] = try PromptRevisionAdvisor.parse(raw)
+                PromptLog.record(PromptLogEntry(
+                    kind: .revise, outcome: .ok, since: startedAt, backend: backend,
+                    historyID: id.uuidString, prompt: request, response: raw))
                 if id == currentHistoryID { showingRevision = true }
             } catch {
+                PromptLog.record(PromptLogEntry(
+                    kind: .revise, outcome: PromptLogEntry.Outcome(error), since: startedAt,
+                    backend: backend, historyID: id.uuidString, prompt: request,
+                    error: error.localizedDescription))
                 setGenerationError("개선안을 받지 못했습니다: \(error.localizedDescription)", for: id)
             }
         }
@@ -704,6 +766,8 @@ final class AppState: ObservableObject {
     /// id를 생략하면 보고 있는 항목.
     func deleteAllGeneratedImages(for id: UUID? = nil) {
         guard let target = id ?? currentHistoryID else { return }
+        PromptLog.record(PromptLogEntry(kind: .generatedDeleted, outcome: .signal,
+                                        historyID: target.uuidString, note: "scope=all"))
         history.removeAllGeneratedImages(id: target)
         guard target == currentHistoryID else { return }  // 다른 항목이면 화면은 그대로
         generatedImages = []
@@ -720,6 +784,8 @@ final class AppState: ObservableObject {
            let item = history.items.first(where: { $0.id == id }),
            item.generatedImageFileNames.indices.contains(index) {
             history.removeGeneratedImage(id: id, fileName: item.generatedImageFileNames[index])
+            PromptLog.record(PromptLogEntry(kind: .generatedDeleted, outcome: .signal,
+                                            historyID: id.uuidString, note: "scope=one"))
         }
         generatedImages.remove(at: index)
         selectedGeneratedIndex = generatedImages.isEmpty
@@ -760,6 +826,9 @@ final class AppState: ObservableObject {
             errorMessage = "원본 이미지를 찾을 수 없어 다시 분석할 수 없습니다."
             return
         }
+        // 재분석을 걸었다는 것은 앞선 추출이 마음에 들지 않았다는 뜻이다 — 로그의 라벨이 된다
+        PromptLog.record(PromptLogEntry(kind: .reanalyze, outcome: .signal,
+                                        historyID: item.id.uuidString))
         // 재분석은 백그라운드 — 보고 있던 프롬프트를 스피너로 덮지 않는다.
         // 끝났을 때 그 항목을 계속 보고 있으면 새 결과로 전환된다.
         Task { await analyze(rawImageData: data, sourceHistoryID: item.id,
@@ -788,10 +857,14 @@ final class AppState: ObservableObject {
         syncingPromptIDs.insert(id)
         Task {
             defer { syncingPromptIDs.remove(id) }
+            let startedAt = Date()
+            let request = PromptSync.prompt(edited: text, language: language)
             do {
-                let raw = try await completeText(
-                    PromptSync.prompt(edited: text, language: language),
-                    schema: PromptSync.outputSchema)
+                let raw = try await completeText(request, schema: PromptSync.outputSchema)
+                PromptLog.record(PromptLogEntry(
+                    kind: .sync, outcome: .ok, since: startedAt, backend: backend,
+                    historyID: id.uuidString, prompt: request, response: raw,
+                    note: "edited=\(Self.logName(language))"))
                 // 그 사이 사용자가 또 고쳤을 수 있으므로 저장소의 최신을 기준으로 반영한다
                 guard let stored = history.items.first(where: { $0.id == id })?.analysis,
                       stored.prompt(for: language) == text else { return }
@@ -799,6 +872,11 @@ final class AppState: ObservableObject {
                 history.update(id: id, analysis: updated)
                 if id == currentHistoryID { analysis = updated }
             } catch {
+                PromptLog.record(PromptLogEntry(
+                    kind: .sync, outcome: PromptLogEntry.Outcome(error), since: startedAt,
+                    backend: backend, historyID: id.uuidString, prompt: request,
+                    error: error.localizedDescription,
+                    note: "edited=\(Self.logName(language))"))
                 setGenerationError(
                     "다른 언어 프롬프트를 맞추지 못했습니다: \(error.localizedDescription)", for: id)
             }
@@ -817,6 +895,11 @@ final class AppState: ObservableObject {
             return
         }
         let updated = stored.updating(prompt: prompt, for: language)
+        // 손을 댔다 = 뽑힌 프롬프트가 그대로 쓸 만하지 않았다. 무엇을 어떻게 고쳤는지 남긴다
+        PromptLog.record(PromptLogEntry(
+            kind: .promptEdited, outcome: .signal, historyID: id.uuidString,
+            prompt: stored.prompt(for: language), response: prompt,
+            note: "language=\(Self.logName(language))"))
         history.update(id: id, analysis: updated)
         self.analysis = updated
     }
@@ -842,8 +925,11 @@ final class AppState: ObservableObject {
         generationErrors[historyID] = nil
         policyRejections[historyID] = nil
         beginGeneration(for: historyID)
+        let startedAt = Date()
         Task {
             defer { finishGeneration(for: historyID) }
+            let engineName = (ImageGenEngine(rawValue: imageGenEngine) ?? .codexCLI).logName
+            let note = "language=\(Self.logName(language)) mode=\(mode.logName)"
             do {
                 let data: Data
                 let engine = ImageGenEngine(rawValue: imageGenEngine) ?? .codexCLI
@@ -857,8 +943,17 @@ final class AppState: ObservableObject {
                                                    model: imageGenModel)
                     data = try await generator.generate(prompt: text, referenceImage: reference)
                 }
+                PromptLog.record(PromptLogEntry(
+                    kind: .generate, outcome: .ok, since: startedAt,
+                    backend: engineName, historyID: historyID.uuidString,
+                    prompt: text, response: "image \(data.count) bytes",
+                    imageSize: ImageProcessor.pixelSize(data), note: note))
                 storeGeneratedImage(data, for: historyID, replacing: replacingFileName)
             } catch {
+                PromptLog.record(PromptLogEntry(
+                    kind: .generate, outcome: PromptLogEntry.Outcome(error), since: startedAt,
+                    backend: engineName, historyID: historyID.uuidString,
+                    prompt: text, error: error.localizedDescription, note: note))
                 // 다른 항목을 보고 있어도 엉뚱한 화면에 뜨지 않도록 항목에 붙여 두고,
                 // 정책 거부면 어떤 프롬프트가 막혔는지도 남겨 개선안을 요청할 수 있게 한다
                 recordGenerationFailure(error, prompt: text, language: language, for: historyID)

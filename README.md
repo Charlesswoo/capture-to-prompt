@@ -38,6 +38,21 @@ swift test
 open dist/CaptureToPrompt.app
 ```
 
+## 프롬프트 로그
+
+앱이 모델에 무엇을 보내 무엇을 받았는지, 그리고 그 결과에 사용자가 어떻게 반응했는지를
+`~/Library/Application Support/CaptureToPrompt/logs/prompt-log.jsonl` 에 한 줄씩 남긴다.
+이 기기 밖으로 나가지 않으며, 설정 › 프롬프트 로그에서 끄거나 지울 수 있다.
+
+```bash
+python3 scripts/prompt_log_report.py          # 사람이 읽는 요약
+python3 scripts/prompt_log_report.py --json   # 도구·LLM용
+```
+
+리포트는 호출/실패 집계, 소요 시간, 추출 축별 길이 분포, 원본 대비 **화면비 재현율**과
+`reanalyze`·`prompt_edited`·`generated_deleted` 비율을 보여준다. 지시문
+(`PromptGuidelines`)은 감이 아니라 이 수치를 근거로 고친다.
+
 ## 트러블슈팅
 
 - **캡처가 검게 나오거나 선택 UI가 안 뜸** — 시스템 설정 → 개인정보 보호 및 보안 →
@@ -64,6 +79,9 @@ Sources/CaptureToPrompt/
   WindowPicker.swift       # 마우스 아래 창 인식 (CGWindowList, 앞→뒤 첫 매칭)
   HotKeyManager.swift      # 전역 단축키 (Carbon RegisterEventHotKey, 권한 불필요)
   HistoryStore.swift     # history.json + images/ 로컬 저장
+  PromptLog.swift        # 프롬프트 실행 로그 (JSONL) — 지시문 개선의 근거
   AppState.swift         # 전역 상태 (캡처→분석→히스토리 파이프라인)
   Views/                 # SwiftUI (메인/결과/히스토리/설정)
+scripts/
+  prompt_log_report.py   # 로그 + 히스토리 → 지시문 약점 리포트
 ```

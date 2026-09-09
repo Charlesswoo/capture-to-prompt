@@ -1,5 +1,40 @@
 # TODO
 
+## 프롬프트 실행 로그 + 리포트 (2026-09-09)
+
+지시문을 감으로 고치지 않기 위해, 앱이 무엇을 보내 무엇을 받았는지 남긴다.
+
+- [x] **`PromptLog`** — `~/Library/Application Support/CaptureToPrompt/logs/prompt-log.jsonl`
+  에 한 줄 한 건(JSONL). 필드: `kind` `outcome` `backend` `model` `history_id`
+  `duration_ms` `prompt`(지시문 전문) `response` `error` `image_size` `note`.
+  5MB 넘으면 `prompt-log.1.jsonl`로 한 번 회전, 깨진 줄은 읽을 때 건너뛴다.
+  설정 › 프롬프트 로그에서 끄기·폴더 열기·지우기.
+- [x] **계측 지점** — 모델 호출 4종(`analyze` `generate` `revise` `sync`)과
+  **사용자 반응 3종**(`reanalyze` `prompt_edited` `generated_deleted`).
+  반응이 핵심이다: 재추출·수정·삭제는 "그 결과가 나빴다"는 유일한 라벨이고,
+  호출 기록만으로는 품질을 알 수 없다. `prompt_edited`는 고치기 전/후를 함께 남긴다.
+- [x] **테스트가 실제 로그를 오염시키던 문제** — 계측을 붙인 직후 `swift test`가
+  사용자의 진짜 `prompt-log.jsonl`에 11건을 남겼다. `PromptLog.shared`는 XCTest
+  프로세스에서 자동으로 꺼지고, 회귀 테스트(`PromptLogDefaultWriterTests`)를 붙였다.
+- [x] **`scripts/prompt_log_report.py`** — 로그 + `history.json`을 함께 읽어
+  호출/실패/소요시간, 축별 길이 분포, **화면비 재현율**을 낸다. `--json`은 도구용.
+
+### 이번에 실측으로 확인한 것
+
+- **prompt_en 길이 편차(1327~3905자)는 문제가 아니다.** 장면 복잡도를 따라간다
+  (인물 3명 3905자 / 낙서 한 장 1327자). 처음엔 리포트가 "장황하다"고 짚었지만
+  원문을 읽어보니 오탐이라 **규칙을 제거**했다. 길이를 품질의 대리 지표로 쓰지 말 것
+  (2026-09-04의 "길이 비율을 내용 누락의 근거로 쓰지 말 것"과 같은 함정).
+- **화면비는 대체로 재현된다** — 히스토리 9건 중 어긋난 것은 1건(517x515 → 1024x1536).
+  근거 1건으로 프롬프트를 고치는 대신, `image_size`를 로그에 남겨 다음에 실제로
+  세도록 했다. 어긋난 비율이 10%를 넘으면 리포트가 짚어준다.
+
+### 다음
+
+- [ ] 앱을 얼마간 쓴 뒤 `python3 scripts/prompt_log_report.py` 를 돌려
+      `prompt_edited`가 어느 축에 몰리는지 보고 `PromptGuidelines`를 고친다.
+      (지금은 표본이 0건 — 근거 없이 지시문을 건드리지 않는다.)
+
 ## 프롬프트 수정 + 캡처 자동 분석 옵션 (2026-07-28)
 
 - [x] **프롬프트 수정** — 결과 화면 프롬프트 카드에 연필 버튼(한/영/일 탭, JSON 탭은
