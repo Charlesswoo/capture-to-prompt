@@ -852,8 +852,9 @@ extension AppStateTests {
     func testAnalysisAttachesToImportedItemWithoutDuplicating() throws {
         let imported = try XCTUnwrap(appState.importImage(try tinyPNG()))
 
-        let item = appState.attachAnalysis(sampleAnalysis, to: imported.item.id,
-                                           imageData: imported.data, mediaType: "image/png")
+        let item = try XCTUnwrap(appState.attachAnalysis(
+            sampleAnalysis, to: imported.item.id,
+            imageData: imported.data, mediaType: "image/png"))
 
         XCTAssertEqual(store.items.count, 1, "불러온 항목에 붙어야 한다 (사본 금지)")
         XCTAssertEqual(item.id, imported.item.id)
@@ -862,24 +863,26 @@ extension AppStateTests {
 
     /// 대상 항목이 없으면(재분석·생성본 추출) 새로 만든다.
     func testAnalysisWithoutTargetCreatesNewItem() throws {
-        let item = appState.attachAnalysis(sampleAnalysis, to: nil,
-                                           imageData: try tinyPNG(), mediaType: "image/png")
+        let item = try XCTUnwrap(appState.attachAnalysis(
+            sampleAnalysis, to: nil, imageData: try tinyPNG(), mediaType: "image/png"))
 
         XCTAssertEqual(store.items.count, 1)
         XCTAssertEqual(store.items[0].id, item.id)
         XCTAssertEqual(store.items[0].analysis, sampleAnalysis)
     }
 
-    /// 그 사이 대상 항목이 삭제됐어도 결과를 잃지 않는다.
-    func testAnalysisFallsBackToNewItemWhenTargetVanished() throws {
+    /// 분석 중에 그 항목을 지웠으면 결과를 버려야 한다 — 지운 항목이 되살아나면 안 된다.
+    /// (대상을 지정한 분석은 "이 항목을 채워라"는 뜻이므로, 대상이 없으면 할 일이 없다.)
+    func testDeletedItemDoesNotComeBackWhenItsAnalysisFinishes() throws {
         let imported = try XCTUnwrap(appState.importImage(try tinyPNG()))
-        store.delete(imported.item)
+        appState.deleteHistoryItem(imported.item)
+        XCTAssertTrue(store.items.isEmpty)
 
         let item = appState.attachAnalysis(sampleAnalysis, to: imported.item.id,
                                            imageData: imported.data, mediaType: "image/png")
 
-        XCTAssertEqual(store.items.count, 1, "사라진 항목 대신 새로 만들어 결과를 남긴다")
-        XCTAssertEqual(store.items[0].id, item.id)
+        XCTAssertNil(item, "사용자가 지운 항목을 분석 결과로 되살리면 안 된다")
+        XCTAssertTrue(store.items.isEmpty)
     }
 
     /// 확장자는 실제 포맷을 따라야 한다 (webp/gif를 .jpg로 저장하지 않는다).
@@ -888,5 +891,56 @@ extension AppStateTests {
         XCTAssertEqual(AppState.fileExtension(for: "image/jpeg"), "jpg")
         XCTAssertEqual(AppState.fileExtension(for: "image/webp"), "webp")
         XCTAssertEqual(AppState.fileExtension(for: "image/gif"), "gif")
+    }
+}
+
+// MARK: - 항목 삭제 시 매달린 상태 정리 (2026-09-09 전체 점검)
+
+extension AppStateTests {
+
+    /// 삭제한 항목에 매달린 진행 상태가 남으면 사이드바에 유령 스피너가 남고,
+    /// 같은 id를 다시 쓸 때 잘못된 상태를 물려받는다.
+    func testDeletingItemClearsItsRunningState() throws {
+        let item = store.add(imageData: Data([1, 2, 3]), fileExtension: "png")
+        appState.beginAnalysis(sourceHistoryID: item.id, takesOverScreen: false)
+        appState.beginGeneration(for: item.id)
+        XCTAssertTrue(appState.isAnalyzing(for: item.id))
+
+        appState.deleteHistoryItem(item)
+
+        XCTAssertFalse(appState.isAnalyzing(for: item.id), "분석 진행 표시가 남으면 안 된다")
+        XCTAssertFalse(appState.isGenerating(for: item.id))
+    }
+
+    /// 분석 결과를 통째로 버린 것도 품질 신호다.
+    func testDeletingItemIsLogged() throws {
+        let previous = PromptLog.shared
+        defer { PromptLog.shared = previous }
+        PromptLog.shared = PromptLogWriter(
+            fileURL: tempDir.appendingPathComponent("log.jsonl"))
+
+        let item = store.add(imageData: Data([1, 2, 3]), fileExtension: "png",
+                             analysis: sampleAnalysis)
+        appState.deleteHistoryItem(item)
+
+        PromptLog.shared.waitForPendingWrites()
+        let entries = try PromptLog.shared.entries()
+        XCTAssertEqual(entries.map(\.kind), [.itemDeleted])
+        XCTAssertEqual(entries[0].historyID, item.id.uuidString)
+        XCTAssertEqual(entries[0].note, "analyzed=true")
+    }
+
+    /// 분석하지 않고 버린 캡처는 "추출이 나빴다"가 아니라 "쓸모없는 캡처"다 — 구분해 둔다.
+    func testDeletingUnanalyzedItemIsMarkedDifferently() throws {
+        let previous = PromptLog.shared
+        defer { PromptLog.shared = previous }
+        PromptLog.shared = PromptLogWriter(
+            fileURL: tempDir.appendingPathComponent("log2.jsonl"))
+
+        let item = store.add(imageData: Data([1, 2, 3]), fileExtension: "png")
+        appState.deleteHistoryItem(item)
+
+        PromptLog.shared.waitForPendingWrites()
+        XCTAssertEqual(try PromptLog.shared.entries()[0].note, "analyzed=false")
     }
 }

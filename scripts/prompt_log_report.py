@@ -103,9 +103,12 @@ def log_report(entries):
         if e.get("duration_ms"):
             durations[e["kind"]].append(e["duration_ms"])
 
-    # 같은 이미지에 재추출·수정·삭제가 붙었다면 그 추출은 실패한 것이다
+    # 같은 이미지에 재추출·수정·삭제가 붙었다면 그 추출은 실패한 것이다.
+    # 단, 분석하지 않은 캡처를 버린 것은 "쓸모없는 캡처"지 추출 불만이 아니다.
     unhappy = Counter()
     for e in signals:
+        if e["kind"] == "item_deleted" and (e.get("note") or "") == "analyzed=false":
+            continue
         if e.get("history_id"):
             unhappy[e["history_id"]] += 1
 

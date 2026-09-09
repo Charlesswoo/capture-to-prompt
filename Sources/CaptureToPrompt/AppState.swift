@@ -457,9 +457,20 @@ final class AppState: ObservableObject {
                 result = try await analyzer.analyze(imageData: normalized.data,
                                                     mediaType: normalized.mediaType)
             }
-            let item = attachAnalysis(result, to: targetHistoryID,
-                                      imageData: normalized.data,
-                                      mediaType: normalized.mediaType)
+            // 그 사이 대상 항목이 삭제됐으면 결과를 버린다 (지운 항목이 되살아나지 않도록)
+            guard let item = attachAnalysis(result, to: targetHistoryID,
+                                            imageData: normalized.data,
+                                            mediaType: normalized.mediaType) else {
+                PromptLog.record(PromptLogEntry(
+                    kind: .analyze, outcome: .ok, since: startedAt,
+                    backend: selected.rawValue,
+                    model: Self.modelName(for: selected, apiModel: model),
+                    historyID: targetHistoryID?.uuidString,
+                    prompt: instructions, response: result.prettyJSON(),
+                    imageSize: ImageProcessor.pixelSize(normalized.data),
+                    note: "discarded=item_deleted"))
+                return
+            }
             // (히스토리에는 이미 있으므로 사이드바에서 바로 열 수 있다)
             PromptLog.record(PromptLogEntry(
                 kind: .analyze, outcome: .ok, since: startedAt,
@@ -483,13 +494,18 @@ final class AppState: ObservableObject {
     }
 
     /// 분석 결과를 대상 항목에 붙인다.
-    /// 캡처·파일로 미리 만들어 둔 항목이 있으면 거기에 붙이고(사본 금지),
-    /// 없거나 그 사이 삭제됐으면 새로 만들어 결과를 잃지 않는다.
+    ///
+    /// 대상을 지정한 분석(캡처·파일로 항목을 미리 만든 경우)은 "이 항목을 채워라"는
+    /// 뜻이므로, 그 사이 사용자가 항목을 지웠으면 **결과를 버린다**(nil).
+    /// 그러지 않으면 지운 캡처가 분석 완료와 함께 되살아난다.
+    /// 대상이 없는 분석(재분석·생성본 추출)은 새 항목을 만드는 것이 의도다.
     @discardableResult
     func attachAnalysis(_ result: PromptAnalysis, to targetHistoryID: UUID?,
-                        imageData: Data, mediaType: String) -> HistoryItem {
-        if let target = targetHistoryID,
-           let existing = history.items.first(where: { $0.id == target }) {
+                        imageData: Data, mediaType: String) -> HistoryItem? {
+        if let target = targetHistoryID {
+            guard let existing = history.items.first(where: { $0.id == target }) else {
+                return nil   // 사용자가 지운 항목 — 되살리지 않는다
+            }
             history.update(id: target, analysis: result)
             return existing
         }
@@ -855,11 +871,20 @@ final class AppState: ObservableObject {
     /// 저장소만 지우면 사라진 항목의 내용이 화면에 남는다.
     func deleteHistoryItem(_ item: HistoryItem) {
         let wasShowing = currentHistoryID == item.id
+        // 분석 결과를 통째로 버린 것도 품질 신호다. 분석 전 캡처를 버린 것과는 뜻이
+        // 다르므로 구분해 남긴다 (전자는 추출 불만, 후자는 쓸모없는 캡처).
+        PromptLog.record(PromptLogEntry(
+            kind: .itemDeleted, outcome: .signal, historyID: item.id.uuidString,
+            note: "analyzed=\(item.analysis != nil)"))
         history.delete(item)
-        // 그 항목에 매달려 있던 상태도 함께 정리
+        // 그 항목에 매달려 있던 상태도 함께 정리 — 남으면 사이드바에 유령 스피너가 뜨고,
+        // 진행 중이던 작업이 사라진 항목을 계속 가리킨다
         generationErrors[item.id] = nil
         policyRejections[item.id] = nil
         revisions[item.id] = nil
+        syncingPromptIDs.remove(item.id)
+        revisingHistoryIDs.remove(item.id)
+        runningAnalyses = runningAnalyses.filter { $0.value.sourceHistoryID != item.id }
         finishGeneration(for: item.id)
         if wasShowing { startNewCapture() }
     }

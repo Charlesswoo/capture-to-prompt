@@ -16,6 +16,7 @@ struct PromptLogEntry: Codable, Equatable {
         case reanalyze                                  // 같은 이미지를 다시 뽑음 = 결과 불만
         case promptEdited = "prompt_edited"             // 뽑힌 프롬프트를 손댐
         case generatedDeleted = "generated_deleted"     // 생성 결과를 버림
+        case itemDeleted = "item_deleted"               // 항목을 통째로 버림
     }
 
     enum Outcome: String, Codable {
