@@ -233,7 +233,24 @@ struct ResultPane: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .padding()
+            .padding([.horizontal, .top])
+
+            // 보고 있는 항목의 식별자 — 로그(history_id)와 대조할 때 쓴다.
+            // 눌러서 전체 UUID를 복사한다 (짧은 ID는 읽기용).
+            if let shortID = appState.currentShortID {
+                Button {
+                    appState.copyCurrentIdentifier()
+                } label: {
+                    Label(shortID, systemImage: "number")
+                        .font(.caption2)
+                        .monospaced()
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .help("이 캡처의 ID — 누르면 전체 ID를 복사합니다 (프롬프트 로그 대조용)")
+                .padding(.horizontal)
+                .padding(.vertical, 6)
+            }
 
             // 본문 + breakdown을 한 스크롤로 — breakdown이 세로로 압축되며
             // 글자가 겹치는 문제 방지 (내용이 길면 함께 스크롤된다)

@@ -897,6 +897,19 @@ final class AppState: ObservableObject {
         return history.items.first(where: { $0.id == id })
     }
 
+    /// 보고 있는 항목의 짧은 식별자 (로그 대조용). 항목이 없으면 nil.
+    var currentShortID: String? { currentHistoryItem?.shortID }
+
+    /// 화면의 ID를 눌렀을 때 복사할 문자열 — 로그에서 찾을 수 있도록 **전체 UUID**다.
+    /// (짧은 ID는 읽기용이고, 로그의 `history_id`에는 전체가 적혀 있다)
+    var currentIdentifierForCopy: String? { currentHistoryID?.uuidString }
+
+    func copyCurrentIdentifier() {
+        guard let text = currentIdentifierForCopy else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
     /// 항목에 저장된 원본 캡처 이미지.
     func originalImageData(for item: HistoryItem) -> Data? {
         try? Data(contentsOf: history.imageURL(for: item))

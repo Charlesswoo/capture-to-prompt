@@ -140,6 +140,11 @@ struct HistoryItem: Codable, Equatable, Identifiable {
         self.generatedImageFileNames = generatedImageFileNames
     }
 
+    /// 화면에 띄우는 짧은 식별자 — 로그의 `history_id`(전체 UUID)의 접두사다.
+    /// 캡처가 여러 개 돌 때 "어느 항목의 기록인지"를 눈으로 짚기 위한 것이라
+    /// 전역 유일성보다 **읽고 대조하기 쉬움**이 목적이다.
+    var shortID: String { String(id.uuidString.prefix(8)) }
+
     /// 구버전 history.json에는 generatedImageFileNames가 없으므로 빈 배열로 읽는다.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)

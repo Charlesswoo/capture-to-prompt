@@ -43,6 +43,12 @@ def read_history(directory):
 
 
 
+
+def short_id(history_id):
+    """화면에 보이는 짧은 ID와 같은 표기 (앞 8자) — 앱과 로그를 눈으로 대조하기 위해."""
+    return (history_id or "")[:8] or "?"
+
+
 def parse_size(text):
     if not text or "x" not in text:
         return None
@@ -83,7 +89,7 @@ def aspect_fidelity(calls):
             matched += 1
         else:
             mismatched += 1
-            examples.append({"history_id": e.get("history_id"),
+            examples.append({"id": short_id(e.get("history_id")),
                              "source": f"{src[0]}x{src[1]}", "generated": f"{out[0]}x{out[1]}",
                              "note": e.get("note")})
     return {"matched": matched, "mismatched": mismatched, "unpaired": unpaired,
@@ -126,6 +132,7 @@ def log_report(entries):
                           if e["outcome"] not in ("ok",)).most_common(10),
         "signal_kinds": dict(Counter(e["kind"] for e in signals)),
         "unhappy_items": len(unhappy),
+        "unhappy_top": [(short_id(k), v) for k, v in unhappy.most_common(5)],
         "analyzed_items": len(analyzed_ids),
         "edits": [{"language": (e.get("note") or "").replace("language=", ""),
                    "before_len": len(e.get("prompt") or ""),
@@ -224,6 +231,9 @@ def main():
         print(f"  {kind:<10} {dict(outcomes)}" + (f"  중앙값 {ms}ms" if ms else ""))
     if log["signal_kinds"]:
         print(f"  반응: {log['signal_kinds']}")
+    if log.get("unhappy_top"):
+        rows = "  ".join(f"[{i}]x{n}" for i, n in log["unhappy_top"])
+        print(f"  손 많이 간 캡처: {rows}   (사이드바의 ID로 찾을 수 있다)")
     if log["errors"]:
         print("\n## 실패 사유")
         for message, count in log["errors"]:
@@ -235,7 +245,8 @@ def main():
         print(f"\n## 화면비 재현  일치 {aspect['matched']} / 어긋남 {aspect['mismatched']}"
               + (f" / 짝 없음 {aspect['unpaired']}" if aspect.get("unpaired") else ""))
         for ex in aspect.get("examples", []):
-            print(f"    {ex['source']} → {ex['generated']}  ({ex.get('note') or ''})")
+            print(f"    [{ex['id']}] {ex['source']} → {ex['generated']}  "
+                  f"({ex.get('note') or ''})")
 
     print(f"\n## 히스토리 {hist['analyzed']}/{hist['items']}건 분석됨")
     if hist.get("median_len"):

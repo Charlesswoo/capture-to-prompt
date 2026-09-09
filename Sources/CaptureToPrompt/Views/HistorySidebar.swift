@@ -74,6 +74,10 @@ struct HistorySidebar: View {
                         .font(.callout)
                         .foregroundStyle(item.analysis == nil ? .secondary : .primary)
                     HStack(spacing: 5) {
+                        // 로그(history_id)와 대조할 수 있는 짧은 식별자
+                        Text(item.shortID)
+                            .monospaced()
+                            .foregroundStyle(.tertiary)
                         Text(item.createdAt, format: .relative(presentation: .named))
                         // 이 항목에 생성 이미지가 보관돼 있음을 표시 (다시 눌러 열면 복원)
                         if !item.generatedImageFileNames.isEmpty {
@@ -137,6 +141,11 @@ struct HistorySidebar: View {
                 // 이미 도는 중이면 analyzeItem이 무시하므로 눌리지 않게 막는다
                 Button("분석 시작") { appState.analyzeItem(item) }
                     .disabled(appState.isAnalyzing(for: item.id))
+            }
+            // 로그에는 전체 UUID가 적히므로 짧은 ID가 아니라 전체를 복사한다
+            Button("ID 복사 (\(item.shortID))") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(item.id.uuidString, forType: .string)
             }
             // 보고 있지 않은 항목의 생성본도 여기서 정리할 수 있다
             if !item.generatedImageFileNames.isEmpty {

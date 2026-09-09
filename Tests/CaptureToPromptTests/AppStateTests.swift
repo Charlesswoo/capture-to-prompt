@@ -944,3 +944,44 @@ extension AppStateTests {
         XCTAssertEqual(try PromptLog.shared.entries()[0].note, "analyzed=false")
     }
 }
+
+// MARK: - 캡처 짧은 ID (2026-09-09 사용자 요청: 검증·디버깅용)
+
+extension AppStateTests {
+
+    /// 로그의 `history_id`(전체 UUID)와 화면을 대조할 수 있어야 한다.
+    /// 전체 UUID는 화면에 두기엔 길므로 앞자리만 쓰되, 전체의 접두사여야
+    /// 로그에서 그대로 찾을 수 있다.
+    func testShortIDIsPrefixOfFullUUID() {
+        let item = HistoryItem(id: UUID(uuidString: "6BD11D38-B12E-4D8C-81A0-AE115AA7A5A2")!,
+                               createdAt: Date(), imageFileName: "a.png")
+
+        XCTAssertEqual(item.shortID, "6BD11D38")
+        XCTAssertTrue(item.id.uuidString.hasPrefix(item.shortID),
+                      "로그의 전체 UUID에서 접두사로 찾을 수 있어야 한다")
+    }
+
+    /// 실제로 쓰이는 개수 규모에서 앞 8자리가 겹치지 않는지 (겹치면 대조가 무의미하다).
+    func testShortIDsDoNotCollideAtRealisticScale() {
+        let ids = (0..<5000).map { _ in
+            HistoryItem(id: UUID(), createdAt: Date(), imageFileName: "a.png").shortID
+        }
+        XCTAssertEqual(Set(ids).count, ids.count, "앞 8자리가 겹치면 안 된다")
+    }
+
+    /// 화면에서 ID를 집어 로그를 찾을 수 있게, 짧은 ID가 아니라 **전체 UUID**를 복사한다.
+    /// (실제 클립보드는 건드리지 않는다 — 테스트가 사용자의 클립보드를 덮어쓰면 안 된다)
+    func testCopiedIdentifierIsFullUUIDNotShortID() throws {
+        let item = store.add(imageData: Data([1, 2, 3]), fileExtension: "png")
+        appState.show(item)
+
+        XCTAssertEqual(appState.currentIdentifierForCopy, item.id.uuidString)
+        XCTAssertNotEqual(appState.currentIdentifierForCopy, item.shortID)
+    }
+
+    /// 보고 있는 항목이 없으면 복사할 것도 없다.
+    func testNoIdentifierToCopyWithoutCurrentItem() {
+        appState.startNewCapture()
+        XCTAssertNil(appState.currentIdentifierForCopy)
+    }
+}
