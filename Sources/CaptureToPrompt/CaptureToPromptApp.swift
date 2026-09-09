@@ -38,8 +38,12 @@ struct CaptureToPromptApp: App {
             CommandGroup(after: .appInfo) {
                 Button("업데이트 확인…") { appState.checkForUpdatesNow() }
             }
-            CommandGroup(after: .newItem) {
-                Button("새 캡처") { appState.startNewCapture() }
+            // `replacing:` 이어야 한다. WindowGroup은 File 메뉴에 "New Window"(⌘N)를
+            // 자동으로 넣는데, `after:`로 붙이면 ⌘N이 둘이 되어 시스템 것이 이기고
+            // 새 창이 열린다 (2026-09-09 사용자 보고). 이 앱은 창이 하나뿐이라
+            // "New Window" 자체가 필요 없다.
+            CommandGroup(replacing: .newItem) {
+                Button("새 화면") { appState.startNewCapture() }
                     .keyboardShortcut("n")
                 Button("원본으로 다시 분석") { appState.reanalyzeCurrent() }
                     .keyboardShortcut("r")

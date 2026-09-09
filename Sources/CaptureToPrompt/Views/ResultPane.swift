@@ -91,8 +91,23 @@ struct ResultPane: View {
             Divider().frame(maxWidth: 220)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("참고 이미지 없이 만들기")
-                    .font(.callout.weight(.medium))
+                HStack {
+                    Text("참고 이미지 없이 만들기")
+                        .font(.callout.weight(.medium))
+                    Spacer(minLength: 8)
+                    // 시스템 붙여넣기 버튼 — 앱이 클립보드를 직접 읽지 않으므로
+                    // macOS의 클립보드 접근 경고가 뜨지 않는다
+                    PasteButton(payloadType: String.self) { strings in
+                        guard let text = strings.first?
+                            .trimmingCharacters(in: .whitespacesAndNewlines),
+                              !text.isEmpty else { return }
+                        seedPrompt = text
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonBorderShape(.capsule)
+                    .controlSize(.small)
+                    .help("클립보드의 글을 여기에 붙여넣습니다")
+                }
                 TextEditor(text: $seedPrompt)
                     .font(.callout)
                     .frame(height: 76)
