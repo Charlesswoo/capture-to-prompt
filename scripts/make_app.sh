@@ -41,7 +41,8 @@ if [[ "$INSTALL" == "1" ]]; then
     # LaunchServices에 즉시 등록 (Spotlight/Alfred 반영)
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$DEST"
     echo "✅ 설치 완료: $DEST"
-    [[ -n "$RUNNING" ]] && echo "⚠️  실행 중인 앱(pid $RUNNING)은 종료 후 다시 열어야 새 버전이 적용됩니다."
+    # || true — set -e 아래에서 앱이 안 떠 있으면 이 줄이 스크립트를 exit 1로 끝낸다
+    [[ -n "$RUNNING" ]] && echo "⚠️  실행 중인 앱(pid $RUNNING)은 종료 후 다시 열어야 새 버전이 적용됩니다." || true
 else
     echo "   실행: open $APP"
     echo "   설치: $0 --install  (/Applications 복사 — Spotlight/Alfred 검색 가능)"
