@@ -1,5 +1,21 @@
 # TODO
 
+## 영역 캡처 후 화면 깜빡임 (2026-09-15 사용자 보고)
+
+`handleCaptured`가 `show(item)` 직후 `analyze()`를 불렀는데, `analyze()`의
+takesOverScreen 블록이 같은 상태를 다시 세팅한다. 그 사이 **'분석 대기 중' 화면이
+한 프레임 번쩍 떴다 사라져** 깜빡였다 (placeholder → pendingView → analyzingView).
+
+- [x] 자동 분석이 이어지면 `show()`를 건너뛴다 (2단계로 축소)
+- [x] **회귀 발견**: `analyze()`의 백엔드 검사가 화면 세팅보다 먼저 `return`해서,
+      키가 없으면 캡처 이미지가 화면에 아예 안 떴다. 화면 세팅을 검사 앞으로 옮김 —
+      분석을 못 해도 이미지는 보이고 오류 배너가 함께 뜬다
+- [x] 테스트 221개 통과
+
+깜빡임이 남아 있으면 다음 후보: `ResultPane`의
+`.animation(.smooth(0.3), value: isAnalyzingCurrentItem)`이 Group 전체에 걸려
+뷰 교체마다 페이드가 도는 것.
+
 ## 핵심 3가지(key_features) 적용 (2026-09-15)
 
 긴 프롬프트(1300~3900자)에서 **무엇이 중요한지 모델에게 알려주는 장치**가 없었다.

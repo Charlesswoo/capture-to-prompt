@@ -1030,3 +1030,26 @@ extension AppStateTests {
                       "씨앗 프롬프트로 만든 첫 장은 생성본이 아니라 원본이다")
     }
 }
+
+// MARK: - 캡처 직후 화면 깜빡임 (2026-09-15 사용자 보고)
+
+extension AppStateTests {
+
+    /// 자동 분석이 이어질 때 '분석 대기 중' 화면을 거치면 한 프레임 번쩍인다.
+    /// analyze()가 화면 상태를 세팅하므로 show()는 자동 분석이 꺼졌을 때만 필요하다.
+    func testAutoAnalyzeSkipsPendingScreen() async throws {
+        appState.autoAnalyzeOnCapture = true
+        appState.backend = AppState.Backend.apiKey.rawValue   // 키 없음 → 즉시 실패, CLI 호출 없음
+        UserDefaults.standard.set("", forKey: "apiKey")
+
+        await appState.handleCaptured(rawImageData: try tinyPNG())
+
+        // 항목은 남고(유실 방지), 대기 화면은 거치지 않는다
+        XCTAssertEqual(store.items.count, 1)
+        XCTAssertEqual(appState.currentHistoryID, store.items.first?.id,
+                       "show()를 건너뛰어도 화면은 그 항목을 가리켜야 한다")
+        // 분석이 시작도 못 하고 실패해도 캡처 이미지는 화면에 떠야 한다
+        XCTAssertNotNil(appState.currentImageData)
+        XCTAssertNotNil(appState.errorMessage)
+    }
+}

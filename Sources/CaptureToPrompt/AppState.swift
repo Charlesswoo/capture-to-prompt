@@ -346,8 +346,13 @@ final class AppState: ObservableObject {
         // 분석 여부와 상관없이 항목을 먼저 만든다 — 그래야 사이드바에서 언제든 되돌아올 수
         // 있고, 다른 화면을 보다가 캡처를 잃어버리지 않는다. 분석은 이 항목에 붙는다.
         let item = store(normalized)
-        show(item)
-        guard autoAnalyzeOnCapture else { return }
+        // 자동 분석이 이어지면 show()를 건너뛴다. analyze()가 같은 상태를 다시 세팅하는데,
+        // 그 사이 '분석 대기 중' 화면이 한 프레임 번쩍 떴다 사라져 깜빡인다
+        // (2026-09-15 사용자 보고: 영역 캡처 후 화면이 깜빡거림).
+        guard autoAnalyzeOnCapture else {
+            show(item)
+            return
+        }
         await analyze(rawImageData: normalized.data, sourceHistoryID: item.id,
                       targetHistoryID: item.id)
     }
@@ -420,6 +425,16 @@ final class AppState: ObservableObject {
             errorMessage = AnalyzerError.invalidImage.localizedDescription
             return
         }
+        // 화면을 점유하는 분석만 현재 화면을 새 대상으로 갈아끼운다.
+        // 재분석은 보고 있던 결과를 그대로 두고 뒤에서 돈다.
+        // **백엔드 검사보다 먼저** 해야 한다 — 키가 없어 분석을 못 해도 캡처한 이미지는
+        // 화면에 떠야 오류 배너와 함께 무엇이 실패했는지 보인다.
+        if takesOverScreen {
+            currentImageData = normalized.data
+            analysis = nil
+            clearGeneratedImages()
+            currentHistoryID = targetHistoryID   // 캡처로 만들어 둔 항목이면 그대로 유지
+        }
         let selected = Backend(rawValue: backend) ?? .claudeCLI
         switch selected {
         case .claudeCLI, .codexCLI:
@@ -429,14 +444,6 @@ final class AppState: ObservableObject {
             return
         default:
             break
-        }
-        // 화면을 점유하는 분석만 현재 화면을 새 대상으로 갈아끼운다.
-        // 재분석은 보고 있던 결과를 그대로 두고 뒤에서 돈다.
-        if takesOverScreen {
-            currentImageData = normalized.data
-            analysis = nil
-            clearGeneratedImages()
-            currentHistoryID = targetHistoryID   // 캡처로 만들어 둔 항목이면 그대로 유지
         }
         let job = beginAnalysis(sourceHistoryID: sourceHistoryID,
                                 takesOverScreen: takesOverScreen)
