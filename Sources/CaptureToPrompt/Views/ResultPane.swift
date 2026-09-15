@@ -618,6 +618,20 @@ struct ResultPane: View {
                 }
             }
 
+            // 모델이 무엇을 핵심으로 봤는지 — 포즈와 같은 이유로 접어도 남긴다
+            if let features = appState.analysis?.keyFeatures, !features.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Label("핵심", systemImage: "star")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(features.joined(separator: " · "))
+                        .font(.caption)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if showBreakdown || !b.pose.isEmpty { Divider().padding(.vertical, 2) }
+            }
+
             // 인물이 있으면 포즈는 접어도 보인다 (검증용)
             if !b.pose.isEmpty {
                 poseSection(b.pose)

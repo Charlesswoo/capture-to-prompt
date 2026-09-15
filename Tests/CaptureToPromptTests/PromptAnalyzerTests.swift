@@ -166,3 +166,31 @@ final class PromptAnalyzerTests: XCTestCase {
         XCTAssertEqual(again.breakdown.pose, "three-quarter stance, bow drawn")
     }
 }
+
+// MARK: - key_features 디코딩 (2026-09-15)
+
+extension PromptAnalyzerTests {
+
+    func testDecodesKeyFeatures() throws {
+        let json = """
+        {"prompt_en":"e","prompt_ko":"k","prompt_ja":"j",
+         "key_features":["crude ink doodle","round face with glasses","black ponytail"],
+         "breakdown":{"subject":"s","style":"s","composition":"c","lighting":"l",
+                      "color_palette":"p","mood":"m","medium":"d","tags":[]}}
+        """
+        let a = try JSONDecoder().decode(PromptAnalysis.self, from: Data(json.utf8))
+        XCTAssertEqual(a.keyFeatures.count, 3)
+        XCTAssertEqual(a.keyFeatures.first, "crude ink doodle")
+    }
+
+    /// 예전 history.json에는 없다 — 없으면 빈 배열로 읽어야 기존 기록이 안 깨진다.
+    func testMissingKeyFeaturesDecodesAsEmpty() throws {
+        let json = """
+        {"prompt_en":"e","prompt_ko":"k","prompt_ja":"j",
+         "breakdown":{"subject":"s","style":"s","composition":"c","lighting":"l",
+                      "color_palette":"p","mood":"m","medium":"d","tags":[]}}
+        """
+        let a = try JSONDecoder().decode(PromptAnalysis.self, from: Data(json.utf8))
+        XCTAssertTrue(a.keyFeatures.isEmpty)
+    }
+}

@@ -5,6 +5,8 @@ struct PromptAnalysis: Codable, Equatable {
     var promptEn: String
     var promptKo: String
     var promptJa: String
+    /// 한눈에 이 그림을 알아보게 하는 3가지. 예전 기록에는 없어 빈 배열일 수 있다.
+    var keyFeatures: [String]
     var breakdown: Breakdown
 
     struct Breakdown: Codable, Equatable {
@@ -57,7 +59,27 @@ struct PromptAnalysis: Codable, Equatable {
         case promptEn = "prompt_en"
         case promptKo = "prompt_ko"
         case promptJa = "prompt_ja"
+        case keyFeatures = "key_features"
         case breakdown
+    }
+
+    init(promptEn: String, promptKo: String, promptJa: String,
+         keyFeatures: [String] = [], breakdown: Breakdown) {
+        self.promptEn = promptEn
+        self.promptKo = promptKo
+        self.promptJa = promptJa
+        self.keyFeatures = keyFeatures
+        self.breakdown = breakdown
+    }
+
+    /// key_features는 나중에 추가된 필드 — 없으면 빈 배열.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        promptEn = try c.decode(String.self, forKey: .promptEn)
+        promptKo = try c.decode(String.self, forKey: .promptKo)
+        promptJa = try c.decode(String.self, forKey: .promptJa)
+        keyFeatures = try c.decodeIfPresent([String].self, forKey: .keyFeatures) ?? []
+        breakdown = try c.decode(Breakdown.self, forKey: .breakdown)
     }
 
     /// 사용자가 수정할 수 있는 프롬프트 언어.

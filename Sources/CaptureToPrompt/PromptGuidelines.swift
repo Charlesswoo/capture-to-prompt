@@ -9,6 +9,17 @@ import Foundation
 /// - 앞머리 지시만 주면 피사체 묘사가 짧아져, "줄이지 말라"는 균형 지시를 함께 둔다.
 enum PromptGuidelines {
 
+    /// 핵심 3가지. prompt_en이 1300~3900자까지 벌어지는데 무엇이 중요한지 알려주는
+    /// 장치가 없었다. A/B 3쌍(2026-09-15)에서 형식 3/3·앞배치 3/3·기존 축 누락 0으로
+    /// 부작용은 없음을 확인했다. 재현율 개선은 로그의 reanalyze/prompt_edited 비율로 잰다.
+    static let keyFeatureRules = """
+    Before writing the prompts, identify the THREE features that matter most for \
+    recognising this image at a glance — the ones a viewer notices first and whose loss \
+    would make a regeneration feel wrong. Return them in "key_features" as exactly 3 \
+    short English phrases, most important first, and state each one explicitly within \
+    the first two sentences of every prompt.
+    """
+
     static let styleRules = """
     Each prompt must OPEN with a short style clause (15-25 words) naming the drawing \
     style — line work, shading, color treatment, finish — and then continue with the \

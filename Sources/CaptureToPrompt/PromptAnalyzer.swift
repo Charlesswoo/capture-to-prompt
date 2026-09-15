@@ -15,6 +15,7 @@ struct PromptAnalyzer {
     look of this image as closely as possible. Write the prompt in three languages \
     (English, Korean, Japanese). Also fill in the structured breakdown fields. \
     Keep tags short (1-3 words each, English, lowercase). \
+    \(PromptGuidelines.keyFeatureRules)
     \(PromptGuidelines.languageRules)
     \(PromptGuidelines.cameraRules)
     \(PromptGuidelines.poseRules)
@@ -27,6 +28,8 @@ struct PromptAnalyzer {
             "prompt_en": ["type": "string", "description": "Detailed generation-ready prompt in English"],
             "prompt_ko": ["type": "string", "description": "Detailed generation-ready prompt in Korean"],
             "prompt_ja": ["type": "string", "description": "Detailed generation-ready prompt in Japanese"],
+            "key_features": ["type": "array", "items": ["type": "string"],
+                             "description": "Exactly 3 short English phrases, most important first"],
             "breakdown": [
                 "type": "object",
                 "properties": [
@@ -49,7 +52,7 @@ struct PromptAnalyzer {
                 "additionalProperties": false,
             ] as [String: Any],
         ],
-        "required": ["prompt_en", "prompt_ko", "prompt_ja", "breakdown"],
+        "required": ["prompt_en", "prompt_ko", "prompt_ja", "key_features", "breakdown"],
         "additionalProperties": false,
     ]
 

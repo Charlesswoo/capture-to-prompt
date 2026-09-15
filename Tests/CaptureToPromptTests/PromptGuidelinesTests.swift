@@ -138,3 +138,27 @@ final class PromptGuidelinesTests: XCTestCase {
         XCTAssertTrue(description.lowercased().contains("camera"))
     }
 }
+
+// MARK: - 핵심 3가지 (2026-09-15, A/B 검증 후 적용)
+
+extension PromptGuidelinesTests {
+
+    /// 긴 프롬프트에서 무엇이 중요한지 알려주는 장치. 3개로 못 박아야 의미가 있다.
+    func testKeyFeatureRulesDemandExactlyThree() {
+        let r = PromptGuidelines.keyFeatureRules
+        XCTAssertTrue(r.contains("key_features"))
+        XCTAssertTrue(r.lowercased().contains("three") || r.contains("3"))
+        // 앞쪽에 실려야 효과가 있다 (뒤에 묻히면 넣으나 마나)
+        XCTAssertTrue(r.lowercased().contains("first two sentences"))
+    }
+
+    /// 세 백엔드가 같은 규칙을 받아야 결과가 갈리지 않는다.
+    func testAllBackendsAskForKeyFeatures() {
+        XCTAssertTrue(ClaudeCLIAnalyzer.prompt(imageFileName: "a.png").contains("key_features"))
+        XCTAssertTrue(CodexCLIAnalyzer.prompt.contains("key_features"))
+        XCTAssertTrue(PromptAnalyzer.systemPrompt.contains("key_features"))
+        // 구조화 출력 스키마에도 있어야 API 백엔드가 실제로 채운다
+        let props = PromptAnalyzer.outputSchema["properties"] as? [String: Any]
+        XCTAssertNotNil(props?["key_features"])
+    }
+}
