@@ -196,6 +196,18 @@ extension ClaudeCLIAnalyzerTests {
         XCTAssertTrue(detail.contains("Please run /login"), "원인이 사라짐: \(detail)")
     }
 
+    /// 실제 봉투(2026-09-16 다른 Mac). result가 1008번째 글자에 있어서
+    /// 그냥 앞부분을 자르면 usage·cache_creation 같은 쓰레기만 보인다.
+    func testRealEnvelopeSurfacesResultNotHousekeepingFields() {
+        let stdout = #"{"duration_api_ms":0,"session_id":"b5498e22","total_cost_usd":0,"usage":{"input_tokens":0,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":0,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[]},"modelUsage":{},"permission_denials":[],"terminal_reason":"api_error","fast_mode_state":"off","fast_mode_disabled_reason":"sdk_opt_in_required","subagent_stats":{"spawned":0,"completed":0,"failed":0},"is_error":true,"num_turns":1,"subtype":"success","result":"Failed to authenticate: OAuth session expired and could not be refreshed","type":"result","duration_ms":2832}"#
+
+        let detail = CLIProcessFailure.detail(stderr: "", stdout: stdout)
+
+        XCTAssertTrue(detail.contains("OAuth session expired"), "원인이 안 보임: \(detail)")
+        XCTAssertFalse(detail.contains("cache_creation"), "봉투 잡동사니가 실림: \(detail)")
+        XCTAssertLessThan(detail.count, 200, "메시지가 너무 김: \(detail)")
+    }
+
     /// stderr에 원인이 있으면 그걸 우선한다 (기존 동작 유지).
     func testStderrWinsWhenPresent() {
         let detail = CLIProcessFailure.detail(stderr: "error: node not found",
@@ -206,5 +218,24 @@ extension ClaudeCLIAnalyzerTests {
     /// 둘 다 비면 빈 문자열 — 호출부가 "종료 코드 N"으로 대체한다.
     func testEmptyBothGivesEmptyDetail() {
         XCTAssertTrue(CLIProcessFailure.detail(stderr: "", stdout: "").isEmpty)
+    }
+}
+
+extension ClaudeCLIAnalyzerTests {
+
+    /// 앱을 받은 사람은 영어 원문만 보면 뭘 해야 할지 모른다.
+    func testAuthFailureAddsKoreanHint() {
+        let e = CLIProcessFailure.error(
+            status: 1, wasSignal: false, stderr: "",
+            stdout: #"{"is_error":true,"result":"Failed to authenticate: OAuth session expired"}"#,
+            what: "분석")
+        let message = e.localizedDescription
+        XCTAssertTrue(message.contains("OAuth session expired"))
+        XCTAssertTrue(message.contains("로그인"), "안내가 없음: \(message)")
+    }
+
+    /// 인증과 무관한 실패에는 로그인 안내를 붙이지 않는다.
+    func testNonAuthFailureHasNoLoginHint() {
+        XCTAssertTrue(CLIProcessFailure.loginHint("결과 JSON 해석 실패").isEmpty)
     }
 }

@@ -12,11 +12,19 @@
 - [x] 호출부 5곳(claude analyze/complete, codex analyze/complete, 이미지 생성) 전달
 - [x] 테스트 224개 통과
 
-### 남은 확인 (사용자 쪽)
+### 원인 확정 (2026-09-16)
 
-- [ ] 그 Mac에서 원인 자체를 확인: `cd /tmp && claude -p "hi" --output-format json`
-      가장 흔한 것은 **claude CLI 미로그인**(설치는 됐지만 인증 안 함).
-      설치 자체가 없으면 "claude CLI를 찾을 수 없습니다"가 떴을 것이므로 아니다.
+`Failed to authenticate: OAuth session expired and could not be refreshed`
+— claude CLI 로그인 세션 만료. 그 Mac에서 `claude` 실행해 재로그인하면 된다.
+
+**첫 수정으로는 부족했다.** stdout을 싣기만 하면 봉투 잡동사니가 앞을 채운다 —
+실제 출력에서 `result`는 **1008번째 글자**라 400자로 자르면
+`cache_creation`·`usage`만 보인다. 사용자가 준 실제 봉투로 테스트해 확인했다.
+
+- [x] `envelopeResult(_:)` — `--output-format json` 봉투면 `result`만 꺼낸다
+- [x] `loginHint(_:)` — 인증 실패면 한국어 안내 한 줄 덧붙임.
+      앱을 받은 사람은 영어 원문만 보면 무엇을 해야 할지 모른다
+- [x] 테스트 227개 통과 (실제 봉투 회귀 테스트 포함)
 
 ## 영역 캡처 후 화면 깜빡임 (2026-09-15 사용자 보고)
 
