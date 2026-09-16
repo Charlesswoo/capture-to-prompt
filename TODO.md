@@ -35,12 +35,7 @@ codex의 내장 `image_generation`은 **ChatGPT 구독 로그인 전용**이다.
 API 키 모드로 쓰면 툴이 없다고만 하고 끝나서 무엇을 바꿔야 할지 알 수 없었다.
 앱에는 이미 OpenAI Images API 엔진이 있으므로 그리로 안내한다.
 
-- [x] **진짜 원인: 앱이 API 키를 codex에 안 넘겼다.** `augmentedEnvironment()`는
-      앱 프로세스 환경을 복사할 뿐인데 **GUI 앱은 셸 환경변수를 물려받지 않는다.**
-      설정의 `imageGenAPIKey`도 `ImageGenerator`(OpenAI API 경로)에서만 쓰였고
-      codex 경로는 키를 아예 받지 않았다. codex 입장에선 키가 없는 게 맞았다.
-      → `CodexImageGenerator(apiKey:)` + `environment()`로 `OPENAI_API_KEY` 주입
-- [x] `engineHint(_:)` — 키 전달을 먼저 안내하고, 그래도 안 되면 엔진 전환을 권한다
+- [x] `CodexImageGenerator.engineHint(_:)` — 툴 부재 신호면 설정 전환을 안내
 - [x] 정책 거부로 오분류되지 않는지 함께 고정 (오분류되면 엉뚱하게 프롬프트
       개선안을 권하게 된다)
 - [x] 테스트 229개 통과

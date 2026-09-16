@@ -197,22 +197,3 @@ extension CodexImageGeneratorTests {
         }
     }
 }
-
-// MARK: - API 키 전달 (2026-09-16 "이미 API 키가 있는데")
-
-extension CodexImageGeneratorTests {
-
-    /// GUI 앱은 셸 환경변수를 물려받지 않는다. 설정에 넣은 키를 넘기지 않으면
-    /// codex는 OPENAI_API_KEY가 없다고 판단한다.
-    func testAPIKeyIsPassedToCodexEnvironment() {
-        let env = CodexImageGenerator(apiKey: "sk-test-123").environment()
-        XCTAssertEqual(env["OPENAI_API_KEY"], "sk-test-123")
-        XCTAssertNotNil(env["PATH"], "PATH 보강은 유지되어야 한다")
-    }
-
-    /// 키가 없으면 기존 환경을 건드리지 않는다 (구독 로그인으로 쓰는 경우).
-    func testNoKeyLeavesEnvironmentAlone() {
-        let env = CodexImageGenerator().environment()
-        XCTAssertNil(env["OPENAI_API_KEY"] ?? ProcessInfo.processInfo.environment["OPENAI_API_KEY"])
-    }
-}

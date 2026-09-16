@@ -4,21 +4,6 @@ import Foundation
 /// ChatGPT 구독 로그인을 그대로 쓰므로 API 키가 필요 없다.
 /// 에이전트가 작업 폴더에 파일을 저장해야 하므로 샌드박스는 workspace-write.
 struct CodexImageGenerator {
-
-    /// 설정에 넣은 OpenAI 키. GUI 앱은 셸 환경변수를 물려받지 않으므로
-    /// 우리가 직접 넘기지 않으면 codex는 키가 없다고 판단한다 (2026-09-16).
-    let apiKey: String
-
-    init(apiKey: String = "") {
-        self.apiKey = apiKey
-    }
-
-    /// PATH를 보강한 환경에 키를 얹는다.
-    func environment() -> [String: String] {
-        var env = CLILocator.augmentedEnvironment()
-        if !apiKey.isEmpty { env["OPENAI_API_KEY"] = apiKey }
-        return env
-    }
     static let outputImageName = "generated.png"
 
     static func prompt(userPrompt: String, hasReference: Bool = false) -> String {
@@ -80,9 +65,8 @@ struct CodexImageGenerator {
         let signs = ["image generation tool is unavailable", "openai_api_key",
                      "requires your explicit authorization", "tool is not available"]
         guard signs.contains(where: { lowered.contains($0) }) else { return "" }
-        return "\n→ 설정 › 이미지 생성에 OpenAI 키를 넣으면 codex에 그 키를 넘깁니다. "
-            + "그래도 같은 오류가 나면 codex의 내장 이미지 생성이 ChatGPT 구독 로그인 "
-            + "전용이라 그런 것이니, 엔진을 **OpenAI 호환 Images API**로 바꾸세요."
+        return "\n→ codex의 내장 이미지 생성은 ChatGPT 구독 로그인에서만 동작합니다. "
+            + "설정 › 이미지 생성에서 **OpenAI 호환 Images API**를 고르고 키를 입력하세요."
     }
 
     /// 모델이 정책상 거절할 때 흔히 쓰는 표현들.
@@ -130,7 +114,7 @@ struct CodexImageGenerator {
         process.executableURL = URL(fileURLWithPath: binary)
         process.arguments = Self.buildArguments(prompt: userPrompt, outputPath: outputURL.path,
                                                 referenceImagePaths: referencePaths)
-        process.environment = environment()
+        process.environment = CLILocator.augmentedEnvironment()
         process.currentDirectoryURL = workDir
         // codex exec는 stdin이 열려 있으면 hang — 반드시 닫는다
         process.standardInput = FileHandle.nullDevice
