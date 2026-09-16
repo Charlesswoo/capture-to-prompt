@@ -140,7 +140,8 @@ struct ClaudeCLIAnalyzer {
             throw CLIProcessFailure.error(
                 status: process.terminationStatus,
                 wasSignal: process.terminationReason == .uncaughtSignal,
-                stderr: err, what: "요청")
+                stderr: err, stdout: String(data: outData, encoding: .utf8) ?? "",
+                what: "요청")
         }
         return try Self.parseCLIResultText(outData)
     }
@@ -194,7 +195,8 @@ struct ClaudeCLIAnalyzer {
             let failure = CLIProcessFailure.error(
                 status: process.terminationStatus,
                 wasSignal: process.terminationReason == .uncaughtSignal,
-                stderr: err, what: "분석")
+                stderr: err, stdout: String(data: outData, encoding: .utf8) ?? "",
+                what: "분석")
             guard err.contains("env: node") else { throw failure }
             throw AnalyzerError.apiError(
                 status: Int(process.terminationStatus),

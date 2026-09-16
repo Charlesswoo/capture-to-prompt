@@ -1,5 +1,23 @@
 # TODO
 
+## CLI 실패 원인이 사라지던 문제 (2026-09-16 다른 Mac 설치 후 보고)
+
+"API 오류 (1): 분석에 실패했습니다 (종료 코드 1)." — 원인이 전혀 안 보였다.
+
+`claude -p --output-format json`은 **오류도 stdout에 JSON으로** 낸다
+(`{"is_error":true,"result":"..."}`). 그런데 exit != 0 분기에서 stderr만 쓰고
+이미 읽어둔 stdout을 버렸다. stderr가 비면 "종료 코드 N"만 남는다.
+
+- [x] `CLIProcessFailure.detail(stderr:stdout:)` — stderr가 비면 stdout을 본다
+- [x] 호출부 5곳(claude analyze/complete, codex analyze/complete, 이미지 생성) 전달
+- [x] 테스트 224개 통과
+
+### 남은 확인 (사용자 쪽)
+
+- [ ] 그 Mac에서 원인 자체를 확인: `cd /tmp && claude -p "hi" --output-format json`
+      가장 흔한 것은 **claude CLI 미로그인**(설치는 됐지만 인증 안 함).
+      설치 자체가 없으면 "claude CLI를 찾을 수 없습니다"가 떴을 것이므로 아니다.
+
 ## 영역 캡처 후 화면 깜빡임 (2026-09-15 사용자 보고)
 
 `handleCaptured`가 `show(item)` 직후 `analyze()`를 불렀는데, `analyze()`의

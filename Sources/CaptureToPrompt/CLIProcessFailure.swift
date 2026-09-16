@@ -8,15 +8,23 @@ import Foundation
 /// 그래서 원인으로 보이는 줄만 추리고, 신호로 죽은 경우는 실패가 아니라 중단으로 알린다.
 enum CLIProcessFailure {
 
+    /// stderr가 비면 stdout을 본다 — claude/codex는 `--output-format json`에서
+    /// 오류도 stdout에 JSON으로 내기 때문에, stderr만 보면 원인이 통째로 사라진다
+    /// (2026-09-16: 다른 Mac에서 "종료 코드 1"만 표시된 건 이 때문이었다).
+    static func detail(stderr: String, stdout: String) -> String {
+        let fromStderr = meaningfulLines(stderr)
+        return fromStderr.isEmpty ? meaningfulLines(stdout) : fromStderr
+    }
+
     static func error(status: Int32, wasSignal: Bool, stderr: String,
-                      what: String) -> AnalyzerError {
+                      stdout: String = "", what: String) -> AnalyzerError {
         if wasSignal {
             return .apiError(
                 status: Int(status),
                 message: "\(what)이(가) 중단되었습니다 — 실행 중이던 프로세스가 외부에서 "
                     + "종료됐습니다(신호 \(status)). 다시 시도해 주세요.")
         }
-        let detail = meaningfulLines(stderr)
+        let detail = detail(stderr: stderr, stdout: stdout)
         return .apiError(
             status: Int(status),
             message: detail.isEmpty

@@ -89,14 +89,14 @@ struct CodexCLIAnalyzer {
         async let outData = readToEnd(stdout)
         async let errData = readToEnd(stderr)
         await Task.detached { process.waitUntilExit() }.value
-        _ = await outData
+        let out = String(data: await outData, encoding: .utf8) ?? ""
 
         guard process.terminationStatus == 0 else {
             let err = String(data: await errData, encoding: .utf8) ?? ""
             throw CLIProcessFailure.error(
                 status: process.terminationStatus,
                 wasSignal: process.terminationReason == .uncaughtSignal,
-                stderr: err, what: "분석")
+                stderr: err, stdout: out, what: "분석")
         }
         guard let text = try? String(contentsOf: outputURL, encoding: .utf8), !text.isEmpty else {
             throw AnalyzerError.emptyResponse
@@ -157,14 +157,14 @@ struct CodexCLIAnalyzer {
         async let outData = readToEnd(stdout)
         async let errData = readToEnd(stderr)
         await Task.detached { process.waitUntilExit() }.value
-        _ = await outData
+        let out = String(data: await outData, encoding: .utf8) ?? ""
 
         guard process.terminationStatus == 0 else {
             let err = String(data: await errData, encoding: .utf8) ?? ""
             throw CLIProcessFailure.error(
                 status: process.terminationStatus,
                 wasSignal: process.terminationReason == .uncaughtSignal,
-                stderr: err, what: "분석")
+                stderr: err, stdout: out, what: "분석")
         }
         let output = (try? Data(contentsOf: outputURL)) ?? Data()
         return try Self.parseOutput(output)

@@ -183,3 +183,28 @@ final class ClaudeCLIAnalyzerTests: XCTestCase {
         }
     }
 }
+
+// MARK: - 실패 원인 은폐 (2026-09-16 다른 Mac에서 "종료 코드 1"만 표시됨)
+
+extension ClaudeCLIAnalyzerTests {
+
+    /// claude -p --output-format json 은 오류도 stdout에 JSON으로 낸다.
+    /// stderr가 비면 원인이 통째로 사라져 "종료 코드 1"만 남았다.
+    func testFailureUsesStdoutWhenStderrIsEmpty() {
+        let stdout = #"{"is_error":true,"result":"Invalid API key · Please run /login"}"#
+        let detail = CLIProcessFailure.detail(stderr: "", stdout: stdout)
+        XCTAssertTrue(detail.contains("Please run /login"), "원인이 사라짐: \(detail)")
+    }
+
+    /// stderr에 원인이 있으면 그걸 우선한다 (기존 동작 유지).
+    func testStderrWinsWhenPresent() {
+        let detail = CLIProcessFailure.detail(stderr: "error: node not found",
+                                              stdout: #"{"result":"ok"}"#)
+        XCTAssertTrue(detail.contains("node not found"))
+    }
+
+    /// 둘 다 비면 빈 문자열 — 호출부가 "종료 코드 N"으로 대체한다.
+    func testEmptyBothGivesEmptyDetail() {
+        XCTAssertTrue(CLIProcessFailure.detail(stderr: "", stdout: "").isEmpty)
+    }
+}
