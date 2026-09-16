@@ -40,6 +40,21 @@ API 키 모드로 쓰면 툴이 없다고만 하고 끝나서 무엇을 바꿔�
       개선안을 권하게 된다)
 - [x] 테스트 229개 통과
 
+**중간에 잘못된 수정을 했다가 되돌렸다** (98c1ce3 → 33d80de). "설정의 키를
+codex에 `OPENAI_API_KEY`로 넘기면 된다"고 고쳤는데, 확인해보니 최신 codex CLI는
+**환경변수를 자동으로 우선하지 않는다** — `codex login --with-api-key`로 명시적
+선택이 필요하고 환경변수는 그 키를 넘길 때 쓰는 자리일 뿐이다
+(developers.openai.com/codex/auth). 주입해도 인증에 쓰이지 않아 효과가 없고,
+구독 로그인 모드를 흔들 위험만 남는다.
+
+오류 메시지의 "CLI fallback ... requires OPENAI_API_KEY"에는 `requires your
+explicit authorization`이 함께 붙어 있다 — 헤드리스 `codex exec`에서는 승인을
+받을 수 없으므로 어느 쪽이든 막힌다.
+
+→ **codex 엔진은 ChatGPT 구독 로그인 전용**으로 두고, 키로 쓰려면 설정에서
+   OpenAI 호환 Images API 엔진을 고른다. (사용자 Mac 실측: `imageGenAPIKey`
+   미설정 + 셸 `OPENAI_API_KEY` 없음 → 구독 로그인으로 정상 동작 중)
+
 ## 영역 캡처 후 화면 깜빡임 (2026-09-15 사용자 보고)
 
 `handleCaptured`가 `show(item)` 직후 `analyze()`를 불렀는데, `analyze()`의
