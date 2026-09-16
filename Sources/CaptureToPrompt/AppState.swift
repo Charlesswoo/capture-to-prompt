@@ -1038,7 +1038,7 @@ final class AppState: ObservableObject {
                 let engine = ImageGenEngine(rawValue: imageGenEngine) ?? .codexCLI
                 switch engine {
                 case .codexCLI:
-                    data = try await CodexImageGenerator()
+                    data = try await CodexImageGenerator(apiKey: resolvedImageGenKey)
                         .generate(prompt: text, referenceImage: reference)
                 case .openAIAPI:
                     let generator = ImageGenerator(baseURL: imageGenBaseURL,
@@ -1097,7 +1097,7 @@ final class AppState: ObservableObject {
                 let data: Data
                 switch engine {
                 case .codexCLI:
-                    data = try await CodexImageGenerator().generate(prompt: seed,
+                    data = try await CodexImageGenerator(apiKey: resolvedImageGenKey).generate(prompt: seed,
                                                                     referenceImage: nil)
                 case .openAIAPI:
                     data = try await ImageGenerator(baseURL: imageGenBaseURL,
