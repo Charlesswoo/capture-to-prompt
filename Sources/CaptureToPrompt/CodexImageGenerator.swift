@@ -53,7 +53,20 @@ struct CodexImageGenerator {
         return .apiError(
             status: 0,
             message: "codex가 이미지를 만들지 못했습니다"
-                + (trimmed.isEmpty ? "." : " — \(trimmed)"))
+                + (trimmed.isEmpty ? "." : " — \(trimmed)")
+                + engineHint(trimmed))
+    }
+
+    /// codex의 내장 image_generation은 **ChatGPT 구독 로그인 전용**이다.
+    /// API 키 모드로 쓰면 툴이 없다고만 하고 끝나서, 무엇을 바꿔야 할지 알 수 없다
+    /// (2026-09-16 사용자 보고). 앱에는 이미 OpenAI Images API 엔진이 있으니 그리로 안내한다.
+    static func engineHint(_ message: String) -> String {
+        let lowered = message.lowercased()
+        let signs = ["image generation tool is unavailable", "openai_api_key",
+                     "requires your explicit authorization", "tool is not available"]
+        guard signs.contains(where: { lowered.contains($0) }) else { return "" }
+        return "\n→ codex의 내장 이미지 생성은 ChatGPT 구독 로그인에서만 동작합니다. "
+            + "설정 › 이미지 생성에서 **OpenAI 호환 Images API**를 고르고 키를 입력하세요."
     }
 
     /// 모델이 정책상 거절할 때 흔히 쓰는 표현들.

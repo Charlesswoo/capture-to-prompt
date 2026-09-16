@@ -26,6 +26,20 @@
       앱을 받은 사람은 영어 원문만 보면 무엇을 해야 할지 모른다
 - [x] 테스트 227개 통과 (실제 봉투 회귀 테스트 포함)
 
+## codex 이미지 생성이 API 키 모드에서 안 되던 건 (2026-09-16)
+
+"The built-in image generation tool is unavailable in this session … requires
+your explicit authorization and `OPENAI_API_KEY`."
+
+codex의 내장 `image_generation`은 **ChatGPT 구독 로그인 전용**이다. codex를
+API 키 모드로 쓰면 툴이 없다고만 하고 끝나서 무엇을 바꿔야 할지 알 수 없었다.
+앱에는 이미 OpenAI Images API 엔진이 있으므로 그리로 안내한다.
+
+- [x] `CodexImageGenerator.engineHint(_:)` — 툴 부재 신호면 설정 전환을 안내
+- [x] 정책 거부로 오분류되지 않는지 함께 고정 (오분류되면 엉뚱하게 프롬프트
+      개선안을 권하게 된다)
+- [x] 테스트 229개 통과
+
 ## 영역 캡처 후 화면 깜빡임 (2026-09-15 사용자 보고)
 
 `handleCaptured`가 `show(item)` 직후 `analyze()`를 불렀는데, `analyze()`의

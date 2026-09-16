@@ -167,3 +167,33 @@ final class CodexImageGeneratorTests: XCTestCase {
         XCTAssertFalse(error.localizedDescription.isEmpty)
     }
 }
+
+// MARK: - 내장 이미지 생성 툴 없음 (2026-09-16 사용자 보고)
+
+extension CodexImageGeneratorTests {
+
+    /// codex를 API 키 모드로 쓰면 내장 image_generation을 못 쓴다
+    /// (ChatGPT 구독 로그인 전용). 원문만 보면 무엇을 바꿔야 할지 알 수 없다.
+    func testToolUnavailableSuggestsSwitchingEngine() {
+        let message = "The built-in image generation tool is unavailable in this session, "
+            + "so I couldn’t create `generated.png`. A CLI fallback exists but requires "
+            + "your explicit authorization and `OPENAI_API_KEY`."
+
+        let error = CodexImageGenerator.failure(lastMessage: message)
+
+        let text = error.localizedDescription
+        XCTAssertTrue(text.contains("설정"), "안내가 없음: \(text)")
+        XCTAssertTrue(text.contains("OpenAI"), "어디로 바꿀지 없음: \(text)")
+        // 정책 거부로 잘못 분류하면 엉뚱하게 프롬프트 개선안을 권하게 된다
+        if case .contentPolicy = error { XCTFail("정책 거부로 오분류됨") }
+    }
+
+    /// 진짜 정책 거부는 그대로 정책 거부여야 한다.
+    func testRealRefusalStillContentPolicy() {
+        let error = CodexImageGenerator.failure(
+            lastMessage: "I can't create that image — it violates the content policy.")
+        guard case .contentPolicy = error else {
+            return XCTFail("정책 거부가 아님")
+        }
+    }
+}
