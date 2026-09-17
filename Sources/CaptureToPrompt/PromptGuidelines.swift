@@ -77,8 +77,9 @@ enum PromptGuidelines {
     """
 
     static let styleRules = """
-    Each prompt must OPEN with a short style clause (15-25 words) naming the drawing \
-    style — line work, shading, color treatment, finish — and then continue with the \
+    Each prompt must OPEN with a short style clause (15-25 words) describing what the \
+    drawing observably looks like — line work, shading, color treatment, finish — and \
+    then continue with the \
     subject, composition, lighting and mood in full detail. Do not shorten the subject \
     description to make room for the style clause. \
     The "style" field, always written in English, must describe the drawing style along \
@@ -88,7 +89,10 @@ enum PromptGuidelines {
     The "medium" field, always written in English, states the production technique and \
     output format in one short phrase — not the software or brushes used. \
     Never name artists, studios, franchises or existing works in any field; describe how \
-    the drawing looks instead. \
+    the drawing looks instead. Do not reach for a genre label ("semi-realistic", \
+    "photorealistic", "hyperrealistic") to fill the clause — those describe a category, \
+    not this drawing, and the generator treats them as rendering instructions. Write the \
+    traits you can point at: "fine tapered linework, soft cel shadows, muted palette". \
     Prompts must be plain descriptive text only — never append tool-specific parameter \
     flags such as --ar, --v, --style, --q, --chaos. If aspect ratio matters, describe it \
     in words (e.g. "vertical 2:3 portrait format").
@@ -165,6 +169,10 @@ enum PromptGuidelines {
     """
 
     /// breakdown.medium 스키마 설명.
+    /// 차원을 반드시 맨 앞에 — "Digital painting"처럼 적으면 프롬프트가 일관성을
+    /// 검증할 기준이 사라지고, 첫 문장이 자유롭게 부풀려진다 (2026-09-17 실측 19%).
     static let mediumFieldDescription =
-        "Production technique and output format in one short English phrase."
+        "Production technique and output format in one short English phrase. "
+        + "It MUST start with the dimensionality: \"2D\", \"3D\" or \"photograph\" "
+        + "(e.g. \"2D digital anime illustration, raster\"). Never leave it implicit."
 }

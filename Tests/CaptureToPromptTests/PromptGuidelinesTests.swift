@@ -240,3 +240,27 @@ extension PromptGuidelinesTests {
         }
     }
 }
+
+// MARK: - 부풀림의 원인 (2026-09-17 53건 전수 조사)
+
+extension PromptGuidelinesTests {
+
+    /// 부풀려진 10건 중 절반이 medium을 "Digital painting"으로만 적었다.
+    /// 기준이 모호하면 "첫 문장은 medium과 일치하라"가 작동하지 않는다.
+    func testMediumMustStateDimensionality() {
+        let d = PromptGuidelines.mediumFieldDescription.lowercased()
+        XCTAssertTrue(d.contains("2d"), "차원 명시 요구가 없음: \(d)")
+        XCTAssertTrue(d.contains("start") || d.contains("begin"),
+                      "맨 앞에 두라는 지시가 없으면 뒤에 묻힌다")
+    }
+
+    /// style clause가 "화풍 이름"을 요구해서 장르 라벨(semi-realistic)이
+    /// 형용사 슬롯을 채웠다 — Polished/Glossy/Painterly semi-realistic.
+    func testStyleClauseAsksForObservedTraitsNotGenreLabels() {
+        let r = PromptGuidelines.styleRules.lowercased()
+        XCTAssertFalse(r.contains("naming the drawing style"),
+                       "화풍 '이름'을 요구하면 장르 라벨이 붙는다")
+        XCTAssertTrue(r.contains("genre label") || r.contains("observable"),
+                      "관찰 가능한 특징으로 쓰라는 지시가 필요하다")
+    }
+}

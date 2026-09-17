@@ -30,6 +30,23 @@
 `Digital 2D anime illustration`인데 `prompt_en` 첫 문장은
 `Polished semi-realistic anime illustration`이었다. 생성은 프롬프트를 따라간다.
 
+##### 왜 부풀려졌나 — 53건 전수 조사
+
+사용자 지적("왜 부풀려졌는지를 확인해야지")으로 원인을 찾았다.
+**medium은 평면인데 첫 문장에 사실적 표현: 10/53 (19%)**
+
+두 지점이 원인이었다:
+
+1. **`mediumFieldDescription`이 차원을 요구하지 않았다** — "Production technique and
+   output format in one short English phrase." 그 결과 `Digital painting`,
+   `Digital painting presented as a vertical raster` 같은 값이 나왔고, 2D인지
+   아닌지 알 수 없다. **"첫 문장은 medium과 일치하라"는 규칙은 기준이 모호하면
+   작동하지 않는다.** → 차원을 맨 앞에 두도록 필수화
+2. **style clause가 "화풍 **이름**을 붙이라"고 요구했다**(`naming the drawing style`)
+   → 장르 라벨이 형용사 슬롯을 채웠다: `Polished semi-realistic`,
+   `Glossy semi-realistic`, `Painterly semi-realistic`.
+   → "관찰되는 모습을 서술"로 바꾸고, 장르 라벨로 채우지 말라고 명시
+
 `fidelityRules` 추가:
 - 원본보다 더 사실적·정교하게 적지 않는다. **첫 style clause는 `medium`과 일치**해야
   한다. 판단 기준: 뚜렷한 윤곽선·평면/밴딩 음영·양식화된 눈 = 그림이지 반실사가 아니다
