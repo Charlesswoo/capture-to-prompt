@@ -36,13 +36,18 @@ enum PromptGuidelines {
     /// 실측: prompt_en 12건 중 6건이 "semi-realistic"을 썼고, 생성 모델은 그것을
     /// 3D 렌더링 지시로 받아들인다. 차원을 첫 문장에 못 박고 모호한 말을 금지한다.
     static let dimensionRules = """
-    State the dimensionality explicitly in the FIRST SENTENCE of every prompt. If the \
-    source is a flat drawing, say "flat 2D <medium>" and add "no 3D rendering, no \
-    photographic depth". If it is a 3D render or a photograph, say so just as plainly. \
-    Never use "semi-realistic", "realistic volume", "lifelike" or similar hedging words \
-    for a 2D drawing — image models read them as a request for 3D shading and the result \
-    stops looking like the original. Describe realistic anatomy or detailed shading with \
-    terms that stay inside the drawing ("carefully drawn proportions", "soft cel shadows").
+    State the dimensionality explicitly in the FIRST SENTENCE of every prompt, whatever \
+    it is. A flat drawing: "flat 2D <medium>", plus "no 3D rendering" when the style \
+    could be mistaken for one. A 3D render, a photograph, a clay or toy render: say that \
+    just as plainly — never flatten a source that is genuinely dimensional.
+
+    Words like "semi-realistic", "realistic volume" and "lifelike" are often the correct \
+    description (a semi-realistic webtoon cover really is one), so use them when they \
+    fit — but never on their own. Image models read a bare "semi-realistic" as a request \
+    for 3D shading. Always pin what is realistic and what stays flat, in the same breath: \
+    "semi-realistic shading inside flat 2D linework", "realistic proportions drawn with \
+    clean cel shadows". The reader must never have to guess whether the result is a \
+    drawing or a render.
     """
 
     /// 긴 프롬프트가 늘 필요하지는 않다 — 짧은 판도 함께 준다.

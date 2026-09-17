@@ -176,15 +176,26 @@ extension PromptGuidelinesTests {
         XCTAssertTrue(r.contains("do not describe") || r.contains("ignore"))
     }
 
-    /// 원본이 2D인데 생성본이 입체로 나오던 원인 — "semi-realistic" 같은 표현이
+    /// 원본이 2D인데 생성본이 입체로 나오던 원인 — 맨 "semi-realistic"이
     /// 3D 렌더링 지시로 읽힌다. 차원을 첫 문장에 못 박게 한다.
-    func testDimensionRulesPinFlatnessAndBanAmbiguousWords() {
+    func testDimensionRulesPinDimensionInFirstSentence() {
         let r = PromptGuidelines.dimensionRules.lowercased()
         XCTAssertTrue(r.contains("2d"))
         XCTAssertTrue(r.contains("3d"))
-        // 모호한 표현을 쓰지 말라고 명시해야 한다
-        XCTAssertTrue(r.contains("semi-realistic"))
         XCTAssertTrue(r.contains("first sentence"))
+    }
+
+    /// **금지가 아니라 한정이다.** 반실사 2D 일러스트는 실재하므로
+    /// "semi-realistic"이 정확한 묘사일 수 있다 — 쓰되 혼자 두지 않게 한다.
+    func testAmbiguousWordsAreQualifiedNotBanned() {
+        let r = PromptGuidelines.dimensionRules.lowercased()
+        XCTAssertTrue(r.contains("semi-realistic"))
+        XCTAssertFalse(r.contains("never use \"semi-realistic"),
+                       "단어를 통째로 금지하면 원본의 성격을 적을 수 없다")
+        XCTAssertTrue(r.contains("never on their own") || r.contains("on their own"),
+                      "단독 사용만 막아야 한다")
+        // 진짜 입체인 원본을 평면으로 적으면 그것도 왜곡이다
+        XCTAssertTrue(r.contains("never flatten"))
     }
 
     /// 간략 프롬프트는 길이 상한이 있어야 의미가 있다.

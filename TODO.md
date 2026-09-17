@@ -15,10 +15,15 @@
 지시로 받아들인다.** 2D 신호(anime illustration, line work)가 있어도 함께 있으면
 입체 쪽으로 끌린다.
 
-`dimensionRules` — 차원을 **첫 문장에** 못 박는다. 평면이면
-`flat 2D <medium>` + `no 3D rendering, no photographic depth`.
-"semi-realistic"·"realistic volume"·"lifelike" 금지. 사실적 묘사가 필요하면
-그림 안에 머무는 표현으로(`carefully drawn proportions`, `soft cel shadows`).
+`dimensionRules` — 차원을 **첫 문장에** 못 박는다. 평면이면 `flat 2D <medium>`,
+3D 렌더·사진·클레이면 그대로 적는다(**진짜 입체인 원본을 평면으로 적는 것도 왜곡**).
+
+처음엔 "semi-realistic"·"realistic volume"·"lifelike"를 **금지**했다가
+사용자 지적으로 **한정**으로 바꿨다 — 반실사 2D 일러스트는 실재하고
+(웹툰 표지가 그렇다) 그 단어가 정확한 묘사일 때가 있다. 문제는 단어가 아니라
+**단독 사용**이다: 맨 "semi-realistic"은 3D 지시로 읽힌다. 무엇이 사실적이고
+무엇이 평면인지 한 호흡에 함께 적게 한다 —
+`semi-realistic shading inside flat 2D linework`.
 
 ### 3. 간략 프롬프트
 
