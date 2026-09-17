@@ -1,5 +1,44 @@
 # TODO
 
+## 로그 전수 분석 → 개선 2건 (2026-09-17, 호출 88건)
+
+`python3 scripts/prompt_log_report.py`
+
+```
+analyze    {ok: 35, error: 1}    중앙값 219639ms
+generate   {ok: 35, error: 10, content_policy: 5}
+추출 뒤 손 댄 비율 6% (2/35)      ← 추출 품질은 양호
+화면비 어긋남 15% (5/33)          ← 임계(10%) 초과
+```
+
+### 1. 안전필터 거부가 정책 거부로 분류되지 않았다
+
+생성 실패 15건 중 **6건이 안전필터 거부인데 `error`**로 잡혔다. codex는 매번 다른
+문장으로 거부한다:
+
+- `The built-in image generator's safety filter rejected the request`
+- `The image tool's safety filter blocked generation`
+- `The image generator's automatic safety review rejected the request as sexual content`
+
+`looksLikeContentPolicy`에 `safety system`은 있는데 **`safety filter`·`safety review`가
+없었다.** 정책 거부로 안 잡히면 **"개선점 보기"가 뜨지 않아** 프롬프트 수정안을
+받을 수 없다 — 만들어 둔 기능이 정작 필요한 순간에 안 나왔다.
+
+- [x] 실측 문구 5종을 회귀 테스트로 고정하고 패턴 추가
+
+### 2. 화면비 15% 어긋남 → API 엔진에 size 전달
+
+2026-09-09에 "재현율 10% 넘으면 넣는다"고 미뤄둔 것. 지금 15%이고, 로그를 보니
+**API 엔진을 6건 쓰고 있다**(codex 30건). API 경로는 `size`를 보낼 수 있다.
+
+- [x] `ImageGenerator.outputSize(matching:)` — 원본 비율 유지, 16 배수,
+      종횡비 1:3~3:1로 클램프, 최대 변 3840, 총 픽셀 8,294,400 이내
+- [x] 생성·편집 요청 양쪽에 `size` 전달. 원본 크기를 모르면(씨앗 프롬프트) 미지정
+- [x] **표준 3종 매핑은 쓰지 않는다** — 실측에서 auto(6.8%)보다 나빴다(10.0%).
+      custom이 0.5%
+- [x] codex 경로는 여전히 불가 (openai/codex#28723)
+- [x] 테스트 259개 통과
+
 ## UI 제외 · 2D 고정 · 간략 프롬프트 (2026-09-17 사용자 요청)
 
 ### 1. 화면에 얹힌 것은 추출하지 않는다

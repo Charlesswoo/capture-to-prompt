@@ -277,3 +277,32 @@ extension CodexImageGeneratorTests {
         XCTAssertTrue(text.contains("API"), "우회로 안내 없음: \(text)")
     }
 }
+
+// MARK: - 안전필터 거부가 정책 거부로 분류되지 않던 문제 (2026-09-17 로그 분석)
+
+extension CodexImageGeneratorTests {
+
+    /// 로그 실측: 생성 실패 15건 중 6건이 안전필터 거부인데 `error`로 분류됐다.
+    /// 정책 거부로 잡혀야 "개선점 보기"가 뜨고 프롬프트 수정안을 받을 수 있다.
+    func testCodexSafetyFilterMessagesAreContentPolicy() {
+        let real = [
+            "The built-in image generator’s safety filter rejected the request. `generated.png` was not created.",
+            "The image tool’s safety filter blocked generation, so `generated.png` was not saved.",
+            "The image generator’s automatic safety review rejected the request as sexual content.",
+            "The image generator’s safety filter blocked the result, so `generated.png` was not created.",
+            "The image generator rejected the request through its safety filter, so `generated.png` is missing.",
+        ]
+        for message in real {
+            guard case .contentPolicy = CodexImageGenerator.failure(lastMessage: message) else {
+                return XCTFail("정책 거부로 분류되지 않음: \(message)")
+            }
+        }
+    }
+
+    /// 안전필터와 무관한 실패는 그대로 일반 오류여야 한다.
+    func testNonSafetyFailureStaysGenericError() {
+        let e = CodexImageGenerator.failure(
+            lastMessage: "The image tool is unavailable in this session.")
+        if case .contentPolicy = e { XCTFail("정책 거부로 오분류됨") }
+    }
+}

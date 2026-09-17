@@ -1044,7 +1044,10 @@ final class AppState: ObservableObject {
                     let generator = ImageGenerator(baseURL: imageGenBaseURL,
                                                    apiKey: resolvedImageGenKey,
                                                    model: imageGenModel)
-                    data = try await generator.generate(prompt: text, referenceImage: reference)
+                    // 원본 화면비를 유지한다 (codex 경로는 size를 못 보낸다)
+                    data = try await generator.generate(
+                        prompt: text, referenceImage: reference,
+                        sourceSize: currentImageData.flatMap(ImageProcessor.pixelSize))
                 }
                 PromptLog.record(PromptLogEntry(
                     kind: .generate, outcome: .ok, since: startedAt,
@@ -1100,6 +1103,7 @@ final class AppState: ObservableObject {
                     data = try await CodexImageGenerator().generate(prompt: seed,
                                                                     referenceImage: nil)
                 case .openAIAPI:
+                    // 씨앗 프롬프트만 있는 경우엔 기준 원본이 없다 → auto
                     data = try await ImageGenerator(baseURL: imageGenBaseURL,
                                                     apiKey: resolvedImageGenKey,
                                                     model: imageGenModel)

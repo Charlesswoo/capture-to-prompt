@@ -205,9 +205,13 @@ extension AnalyzerError {
         let codes = ["moderation_blocked", "content_policy_violation", "content_filter"]
         if let code, codes.contains(code.lowercased()) { return true }
         guard let message = message?.lowercased() else { return false }
+        // codex는 매번 다른 문장으로 거부한다 — 로그 실측(2026-09-17)에서 모은 표현들.
+        // 여기서 못 잡으면 일반 오류가 되어 '개선점 보기'가 뜨지 않는다.
         let phrases = ["safety system", "content policy", "content_policy",
                        "usage policies", "safety policies", "moderation",
-                       "violates the content", "not allowed by our safety"]
+                       "violates the content", "not allowed by our safety",
+                       "safety filter", "safety review", "safety check",
+                       "blocked by the tool", "rejected the request as"]
         return phrases.contains { message.contains($0) }
     }
 }

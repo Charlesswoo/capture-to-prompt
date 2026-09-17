@@ -39,7 +39,7 @@ struct ImageGenerator {
 
     /// 요청 구성 (테스트 가능하도록 분리).
     static func buildRequest(baseURL: String, apiKey: String, model: String,
-                             prompt: String) throws -> URLRequest {
+                             prompt: String, size: String? = nil) throws -> URLRequest {
         guard !apiKey.isEmpty else { throw AnalyzerError.missingImageGenKey }
         let trimmed = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         guard let url = URL(string: "\(trimmed)/images/generations"), url.scheme != nil else {
@@ -51,7 +51,8 @@ struct ImageGenerator {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         // response_format은 모델마다 수락 여부가 갈려서(gpt-image 계열은 거부) 보내지 않는다
-        let body: [String: Any] = ["model": model, "prompt": prompt, "n": 1]
+        var body: [String: Any] = ["model": model, "prompt": prompt, "n": 1]
+        if let size { body["size"] = size }   // 없으면 auto — 대체로 맞지만 가끔 크게 어긋난다
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         return request
     }
@@ -59,7 +60,8 @@ struct ImageGenerator {
     /// 변형 생성 요청 구성 — `POST {base}/images/edits` (multipart/form-data).
     /// 참조 이미지는 `image[]` 필드로 보낸다 (공식 문서 기준, 여러 장도 같은 필드명).
     static func buildEditRequest(baseURL: String, apiKey: String, model: String,
-                                 prompt: String, referenceImage: Data) throws -> URLRequest {
+                                 prompt: String, referenceImage: Data,
+                                 size: String? = nil) throws -> URLRequest {
         guard !apiKey.isEmpty else { throw AnalyzerError.missingImageGenKey }
         let trimmed = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         guard let url = URL(string: "\(trimmed)/images/edits"), url.scheme != nil else {
@@ -82,6 +84,7 @@ struct ImageGenerator {
         appendField("model", model)
         appendField("prompt", prompt)
         appendField("n", "1")
+        if let size { appendField("size", size) }
         body.append(Data("--\(boundary)\r\n".utf8))
         body.append(Data(
             "Content-Disposition: form-data; name=\"image[]\"; filename=\"reference.png\"\r\n".utf8))
@@ -122,6 +125,37 @@ struct ImageGenerator {
             return .url(url)
         }
         throw AnalyzerError.emptyResponse
+    }
+
+    // MARK: - 출력 크기
+
+    /// 원본 화면비를 유지하는 생성 크기 ("1536x1408").
+    ///
+    /// 실측(2026-09-09, 8쌍 평균 오차): size 미지정(auto) 6.8% / 표준 3종 매핑 10.0% /
+    /// 원본 비율 그대로 0.5%. **표준 3종은 auto보다 나쁘다** — auto가 대체로 잘
+    /// 맞히는데 세 칸에 욱여넣으면 맞던 것까지 틀어지기 때문. 그래서 custom을 쓴다.
+    ///
+    /// 모델 제약: 두 변 모두 16의 배수, 종횡비 1:3~3:1, 최대 변 3840, 총 픽셀 8,294,400.
+    static func outputSize(matching source: String?) -> String? {
+        guard let source, let x = source.firstIndex(of: "x"),
+              let sw = Int(source[source.startIndex..<x]),
+              let sh = Int(source[source.index(after: x)...]),
+              sw > 0, sh > 0 else { return nil }
+
+        let ratio = min(max(Double(sw) / Double(sh), 1.0 / 3.0), 3.0)   // 1:3~3:1로 당긴다
+        // 장변 1536 기준 — 표준 크기대와 같은 급이면서 총 픽셀 상한에 여유가 있다
+        var w = ratio >= 1 ? 1536.0 : 1536.0 * ratio
+        var h = ratio >= 1 ? 1536.0 / ratio : 1536.0
+        let longest = max(w, h)
+        if longest > 3840 { w *= 3840 / longest; h *= 3840 / longest }
+        if w * h > 8_294_400 {
+            let scale = (8_294_400 / (w * h)).squareRoot()
+            w *= scale; h *= scale
+        }
+        // 16의 배수로 맞추되 0이 되지 않게
+        let rw = max(16, (Int(w.rounded()) / 16) * 16)
+        let rh = max(16, (Int(h.rounded()) / 16) * 16)
+        return "\(rw)x\(rh)"
     }
 
     // MARK: - 모델 목록
@@ -177,14 +211,18 @@ struct ImageGenerator {
 
     /// 프롬프트로 이미지를 생성해 바이트로 반환한다 (url 응답이면 내려받는다).
     /// referenceImage를 주면 그 이미지를 바탕으로 변형(images/edits)한다.
-    func generate(prompt: String, referenceImage: Data? = nil) async throws -> Data {
+    /// - sourceSize: 원본 픽셀 크기("1024x1536"). 주면 그 화면비를 유지해 생성한다.
+    func generate(prompt: String, referenceImage: Data? = nil,
+                  sourceSize: String? = nil) async throws -> Data {
+        let size = Self.outputSize(matching: sourceSize)
         let request: URLRequest
         if let referenceImage {
             request = try Self.buildEditRequest(baseURL: baseURL, apiKey: apiKey, model: model,
-                                                prompt: prompt, referenceImage: referenceImage)
+                                                prompt: prompt, referenceImage: referenceImage,
+                                                size: size)
         } else {
             request = try Self.buildRequest(baseURL: baseURL, apiKey: apiKey,
-                                            model: model, prompt: prompt)
+                                            model: model, prompt: prompt, size: size)
         }
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 300

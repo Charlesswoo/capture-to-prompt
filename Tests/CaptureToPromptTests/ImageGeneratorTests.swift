@@ -243,3 +243,43 @@ extension ImageGeneratorTests {
         XCTAssertTrue(merged.contains("gpt-image-2.5-flare"))
     }
 }
+
+// MARK: - 원본 화면비 유지 (2026-09-17, 재현율 15% 어긋남)
+
+extension ImageGeneratorTests {
+
+    /// 실측(8쌍): auto 6.8% / 표준 3종 매핑 10.0% / 원본 비율 custom 0.5%.
+    /// 표준 3종은 auto보다 나쁘므로 원본 비율을 16 배수로 맞춘다.
+    func testOutputSizeKeepsSourceAspect() throws {
+        let size = try XCTUnwrap(ImageGenerator.outputSize(matching: "517x515"))
+        let parts = size.split(separator: "x").compactMap { Int($0) }
+        XCTAssertEqual(parts.count, 2)
+        let (w, h) = (parts[0], parts[1])
+        XCTAssertEqual(w % 16, 0, "가로가 16의 배수가 아님: \(size)")
+        XCTAssertEqual(h % 16, 0, "세로가 16의 배수가 아님: \(size)")
+        let want = 517.0 / 515.0, got = Double(w) / Double(h)
+        XCTAssertLessThan(abs(want - got) / want, 0.03, "화면비가 어긋남: \(size)")
+    }
+
+    /// 모델 제약: 종횡비 1:3~3:1을 넘으면 요청이 거부된다 → 경계로 당긴다.
+    func testExtremeAspectIsClampedIntoRange() throws {
+        let size = try XCTUnwrap(ImageGenerator.outputSize(matching: "4000x200"))
+        let parts = size.split(separator: "x").compactMap { Int($0) }
+        let ratio = Double(parts[0]) / Double(parts[1])
+        XCTAssertLessThanOrEqual(ratio, 3.0 + 0.01, "1:3~3:1을 벗어남: \(size)")
+    }
+
+    /// 총 픽셀 상한(8,294,400)과 최대 변(3840)을 넘지 않는다.
+    func testSizeStaysWithinModelLimits() throws {
+        let size = try XCTUnwrap(ImageGenerator.outputSize(matching: "6000x4000"))
+        let parts = size.split(separator: "x").compactMap { Int($0) }
+        XCTAssertLessThanOrEqual(max(parts[0], parts[1]), 3840)
+        XCTAssertLessThanOrEqual(parts[0] * parts[1], 8_294_400)
+    }
+
+    /// 원본 크기를 모르면 지정하지 않는다 (auto가 그럭저럭 맞힌다).
+    func testNoSourceMeansNoSize() {
+        XCTAssertNil(ImageGenerator.outputSize(matching: nil))
+        XCTAssertNil(ImageGenerator.outputSize(matching: "garbage"))
+    }
+}
