@@ -240,3 +240,40 @@ extension CodexImageGeneratorTests {
             "Failed to authenticate: OAuth session expired and could not be refreshed").isEmpty)
     }
 }
+
+// MARK: - 사용량 한도 (2026-09-17 실제 발생)
+
+extension CodexImageGeneratorTests {
+
+    private var usageLimitStderr: String {
+        """
+        warning: clamping SessionEnd hook timeout to 3s in /Users/x/.codex/hooks/hooks.json
+        ERROR: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage \
+        to purchase more credits or try again at Sep 19th, 2026 10:27 PM.
+        ERROR: You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage \
+        to purchase more credits or try again at Sep 19th, 2026 10:27 PM.
+        """
+    }
+
+    /// 같은 줄이 여러 번 나와도 한 번만 보여준다 (메시지가 두 배로 길어졌다).
+    func testDuplicateErrorLinesAreCollapsed() {
+        let detail = CLIProcessFailure.detail(stderr: usageLimitStderr, stdout: "")
+        let count = detail.components(separatedBy: "usage limit").count - 1
+        XCTAssertEqual(count, 1, "같은 오류가 반복됨: \(detail)")
+        XCTAssertTrue(detail.contains("Sep 19th"), "재시도 시각이 잘림: \(detail)")
+    }
+
+    /// 한도 초과는 로그인 문제가 아니다 — 로그인 안내가 붙으면 안 된다.
+    func testUsageLimitIsNotALoginProblem() {
+        XCTAssertTrue(CLIProcessFailure.loginHint(usageLimitStderr).isEmpty)
+    }
+
+    /// 한도 초과일 때 앱만 아는 우회로(다른 백엔드)를 알려준다.
+    func testUsageLimitSuggestsOtherBackends() {
+        let e = CLIProcessFailure.error(status: 1, wasSignal: false,
+                                        stderr: usageLimitStderr, what: "이미지 생성")
+        let text = e.localizedDescription
+        XCTAssertTrue(text.contains("한도"), "한국어 안내 없음: \(text)")
+        XCTAssertTrue(text.contains("API"), "우회로 안내 없음: \(text)")
+    }
+}

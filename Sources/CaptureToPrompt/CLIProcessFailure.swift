@@ -41,7 +41,8 @@ enum CLIProcessFailure {
             status: Int(status),
             message: detail.isEmpty
                 ? "\(what)에 실패했습니다 (종료 코드 \(status))."
-                : "\(what)에 실패했습니다: \(detail)\(loginHint(detail))")
+                : "\(what)에 실패했습니다: \(detail)"
+                    + loginHint(detail) + usageLimitHint(detail))
     }
 
     /// 로그인 만료는 앱을 받은 사람이 가장 흔히 겪는데 영어 원문만 보면
@@ -61,6 +62,17 @@ enum CLIProcessFailure {
             + "(`claude` 또는 `codex`)를 한 번 실행해 로그인한 뒤 다시 시도하세요."
     }
 
+    /// 구독 한도는 기다리거나 결제하는 수밖에 없지만, **다른 백엔드로 계속 쓸 수 있다는
+    /// 것은 앱만 안다** (2026-09-17: codex 한도 초과로 이미지 생성이 막혔다).
+    static func usageLimitHint(_ detail: String) -> String {
+        let lowered = detail.lowercased()
+        let signs = ["usage limit", "rate limit", "quota", "purchase more credits",
+                     "insufficient_quota"]
+        guard signs.contains(where: { lowered.contains($0) }) else { return "" }
+        return "\n→ 구독 한도에 걸렸습니다. 기다리거나 크레딧을 채우는 대신, "
+            + "설정에서 API 키 백엔드로 바꾸면 지금 바로 계속할 수 있습니다."
+    }
+
     /// stderr에서 원인이 될 만한 줄만 추린다.
     static func meaningfulLines(_ stderr: String, limit: Int = 400) -> String {
         let lines = stderr
@@ -76,7 +88,10 @@ enum CLIProcessFailure {
             return markers.contains { lowered.contains($0) }
         }
         let picked = candidates.isEmpty ? [lines[lines.count - 1]] : candidates
-        return String(picked.joined(separator: " / ").prefix(limit))
+        // codex는 같은 오류를 여러 번 뱉는다 — 그대로 이으면 메시지가 배로 길어진다
+        var seen = Set<String>()
+        let unique = picked.filter { seen.insert($0).inserted }
+        return String(unique.joined(separator: " / ").prefix(limit))
     }
 
     /// 원인과 무관한 진행 로그·문서 안내 줄.
