@@ -179,3 +179,40 @@ final class ImageGeneratorTests: XCTestCase {
         }
     }
 }
+
+// MARK: - 모델 목록 (2026-09-17 gpt-image-2.5 출시)
+
+extension ImageGeneratorTests {
+
+    /// 새 모델이 나올 때마다 ID를 추측해 박지 않도록, 키로 실제 목록을 가져온다.
+    func testParsesImageModelsOnly() throws {
+        let json = """
+        {"object":"list","data":[
+          {"id":"gpt-4o","object":"model"},
+          {"id":"gpt-image-2","object":"model"},
+          {"id":"gpt-image-2.5-flare","object":"model"},
+          {"id":"gpt-image-2.5-sunburst","object":"model"},
+          {"id":"dall-e-3","object":"model"},
+          {"id":"whisper-1","object":"model"}]}
+        """
+        let models = try ImageGenerator.parseModels(Data(json.utf8))
+
+        XCTAssertEqual(models, ["dall-e-3", "gpt-image-2", "gpt-image-2.5-flare",
+                                "gpt-image-2.5-sunburst"],
+                       "이미지 모델만, 이름순으로")
+        XCTAssertFalse(models.contains("gpt-4o"))
+        XCTAssertFalse(models.contains("whisper-1"))
+    }
+
+    func testModelsRequestUsesAuthorizedEndpoint() throws {
+        let request = ImageGenerator.modelsRequest(baseURL: "https://api.openai.com/v1",
+                                                   apiKey: "sk-test")
+        XCTAssertEqual(request.url?.absoluteString, "https://api.openai.com/v1/models")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer sk-test")
+    }
+
+    /// 목록을 못 읽어도 설정 화면이 멈추면 안 된다.
+    func testParseModelsThrowsOnGarbage() {
+        XCTAssertThrowsError(try ImageGenerator.parseModels(Data("nope".utf8)))
+    }
+}

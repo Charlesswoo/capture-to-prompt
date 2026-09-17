@@ -1,5 +1,20 @@
 # TODO
 
+## 이미지 생성 모델 선택 (2026-09-17, ChatGPT Images 2.5 출시)
+
+지금 쓰는 기본값은 `gpt-image-2`. 2026-09-08 **GPT-Image-2.5 Flare / Sunburst**가
+나왔지만 **정확한 API 모델 ID를 공식 문서에서 확인하지 못했다** — 마케팅 이름만
+공개돼 있다. 추측해서 박으면 400이 나므로 하드코딩하지 않았다.
+
+- [x] `ImageGenerator.availableModels(baseURL:apiKey:)` — `/v1/models`에서
+      `gpt-image`·`dall-e` 접두 모델만 걸러 정렬. 새 모델이 나와도 앱 수정 불필요
+- [x] 설정 › 이미지 생성: "목록 불러오기" → Picker. 실패해도 직접 입력은 그대로
+- [x] 기본값은 `gpt-image-2` 유지 (확인 안 된 ID로 바꾸면 전원 실패)
+- [x] 테스트 232개 통과
+
+codex 엔진은 모델을 고를 수 없다 — codex가 `gpt-image-2-codex`로 강제한다
+(openai/codex#28723, size·quality도 무시).
+
 ## CLI 실패 원인이 사라지던 문제 (2026-09-16 다른 Mac 설치 후 보고)
 
 "API 오류 (1): 분석에 실패했습니다 (종료 코드 1)." — 원인이 전혀 안 보였다.

@@ -108,6 +108,45 @@ struct ImageGenerator {
         throw AnalyzerError.emptyResponse
     }
 
+    // MARK: - 모델 목록
+
+    /// 이미지 모델 접두사 — OpenAI 호환 API가 온갖 모델을 함께 돌려주므로 걸러낸다.
+    private static let imageModelPrefixes = ["gpt-image", "dall-e"]
+
+    static func modelsRequest(baseURL: String, apiKey: String) -> URLRequest {
+        var request = URLRequest(
+            url: URL(string: baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                     + "/models")!)
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        return request
+    }
+
+    static func parseModels(_ data: Data) throws -> [String] {
+        struct Payload: Decodable {
+            struct Item: Decodable { let id: String }
+            let data: [Item]
+        }
+        guard let payload = try? JSONDecoder().decode(Payload.self, from: data) else {
+            throw AnalyzerError.apiError(status: 0, message: "모델 목록을 해석하지 못했습니다.")
+        }
+        return payload.data.map(\.id)
+            .filter { id in imageModelPrefixes.contains { id.hasPrefix($0) } }
+            .sorted()
+    }
+
+    /// 키로 쓸 수 있는 이미지 모델을 조회한다.
+    /// 새 모델(gpt-image-2.5 등)이 나와도 앱에 ID를 박아둘 필요가 없다.
+    static func availableModels(baseURL: String, apiKey: String) async throws -> [String] {
+        guard !apiKey.isEmpty else { throw AnalyzerError.missingImageGenKey }
+        let (data, response) = try await URLSession.shared
+            .data(for: modelsRequest(baseURL: baseURL, apiKey: apiKey))
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else {
+            throw AnalyzerError.apiError(status: status, message: "모델 목록을 가져오지 못했습니다.")
+        }
+        return try parseModels(data)
+    }
+
     let baseURL: String
     let apiKey: String
     let model: String

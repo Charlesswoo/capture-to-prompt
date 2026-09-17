@@ -25,6 +25,26 @@ struct SettingsView: View {
     /// 기록을 지운 뒤 크기 표시를 다시 계산시키기 위한 토큰.
     @State private var promptLogSizeToken = UUID()
 
+    @State private var imageModels: [String] = []
+    @State private var isLoadingModels = false
+    @State private var modelsError: String?
+
+    /// 키로 쓸 수 있는 이미지 모델을 조회한다 (실패해도 직접 입력은 그대로 쓸 수 있다).
+    private func loadImageModels() {
+        isLoadingModels = true
+        modelsError = nil
+        Task {
+            defer { isLoadingModels = false }
+            do {
+                imageModels = try await ImageGenerator.availableModels(
+                    baseURL: imageGenBaseURL, apiKey: appState.resolvedImageGenKey)
+                if imageModels.isEmpty { modelsError = "이 키로 쓸 수 있는 이미지 모델이 없습니다." }
+            } catch {
+                modelsError = error.localizedDescription
+            }
+        }
+    }
+
     private var promptLogSizeText: String {
         _ = promptLogSizeToken
         let bytes = PromptLog.currentByteSize()
@@ -161,9 +181,30 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                     SecureField("API 키", text: $imageGenAPIKey)
                         .textContentType(.password)
-                    TextField("모델", text: $imageGenModel,
-                              prompt: Text(ImageGenerator.defaultModel))
-                        .autocorrectionDisabled()
+                    HStack {
+                        TextField("모델", text: $imageGenModel,
+                                  prompt: Text(ImageGenerator.defaultModel))
+                            .autocorrectionDisabled()
+                        // 새 모델(gpt-image-2.5 등)이 나와도 앱에 ID를 박아두지 않도록
+                        // 키로 실제 목록을 가져와 고르게 한다
+                        if imageModels.isEmpty {
+                            Button(isLoadingModels ? "불러오는 중…" : "목록 불러오기") {
+                                loadImageModels()
+                            }
+                            .disabled(isLoadingModels || appState.resolvedImageGenKey.isEmpty)
+                        } else {
+                            Picker("", selection: $imageGenModel) {
+                                ForEach(imageModels, id: \.self) { Text($0).tag($0) }
+                            }
+                            .labelsHidden()
+                            .frame(maxWidth: 200)
+                        }
+                    }
+                    if let modelsError {
+                        Text(modelsError)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
                     Text("OpenAI 호환 Images API — 키를 비우면 OPENAI_API_KEY 환경변수를 사용합니다.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
