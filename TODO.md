@@ -1,5 +1,24 @@
 # TODO
 
+## codex stderr 노이즈가 실패 원인으로 표시되던 문제 (2026-09-17 사용자 보고)
+
+이미지 생성 실패 메시지에 Railway MCP의 `AuthRequired`와 hook 경고가 실리고,
+거기에 **"터미널에서 `claude`를 실행해 로그인하세요"**라는 엉뚱한 안내까지 붙었다.
+codex 이미지 생성 실패인데 claude 로그인을 권한 셈 — 어제 넣은 `loginHint`가
+`AuthRequired`의 "auth"에 걸려 오작동했다.
+
+- 배경: `~/.codex/config.toml`에 Railway MCP가 **전역**으로 등록돼 있어서,
+  이미지 생성용 `codex exec`를 띄울 때마다 함께 기동되고 인증 실패로 stderr를
+  오염시켰다. (전역 지침의 "서비스 전용 MCP는 쓰는 프로젝트에만" 사례)
+  → 사용자 요청으로 제거. 백업: `~/.codex/config.toml.before-railway-removal`
+- [x] `isNoise` 강화 — `rmcp::`, `worker quit with fatal`, `warning: clamping`,
+      `hooks.json`, `authrequired`, `www_authenticate_header`
+- [x] `loginHint` 조건을 좁힘 — 광범위한 "authenticate"·"login" 대신
+      `session expired`·`please run /login`·`not logged in` 같은 실제 문구만.
+      MCP 인증 실패는 먼저 제외한다
+- [x] 안내에서 `claude` 하드코딩 제거 — codex 경로에도 붙으므로 중립 문구로
+- [x] 테스트 239개 통과 (실제 보고 메시지로 회귀 고정)
+
 ## 이미지 생성 모델 선택 (2026-09-17, ChatGPT Images 2.5 출시)
 
 지금 쓰는 기본값은 `gpt-image-2`. 2026-09-08 **GPT-Image-2.5 Flare / Sunburst**가

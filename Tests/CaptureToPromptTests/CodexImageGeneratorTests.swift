@@ -197,3 +197,46 @@ extension CodexImageGeneratorTests {
         }
     }
 }
+
+// MARK: - stderr 노이즈·엉뚱한 안내 (2026-09-17 사용자 보고)
+
+extension CodexImageGeneratorTests {
+
+    /// codex는 MCP 워커 오류·hook 경고를 stderr에 섞어 뱉는다.
+    /// 그게 원인으로 표시되면 진짜 원인이 가려진다.
+    private var noisyStderr: String {
+        """
+        warning: clamping SessionEnd hook timeout to 3s in \
+        /Users/charles/.codex/plugins/cache/openai-codex/codex/1.0.6/hooks/hooks.json
+        2026-09-17T08:55:32.664172Z ERROR rmcp::transport::worker: worker quit with fatal: \
+        Transport channel closed, when AuthRequired(AuthRequiredError { \
+        www_authenticate_header: "Bearer realm=\\"mcp\\", \
+        resource_metadata=\\"https://mcp.railway.com/.well-known/oauth-protected-resource\\"" })
+        """
+    }
+
+    func testMCPAndHookNoiseIsFilteredOut() {
+        let detail = CLIProcessFailure.detail(stderr: noisyStderr, stdout: "")
+        XCTAssertFalse(detail.contains("rmcp::transport"), "MCP 워커 오류가 실림: \(detail)")
+        XCTAssertFalse(detail.contains("hooks.json"), "hook 경고가 실림: \(detail)")
+    }
+
+    /// Railway MCP의 AuthRequired는 CLI 로그인과 무관하다.
+    /// 여기에 "claude로 로그인하세요"가 붙으면 완전히 엉뚱한 안내가 된다.
+    func testMCPAuthErrorDoesNotTriggerLoginHint() {
+        XCTAssertTrue(CLIProcessFailure.loginHint(noisyStderr).isEmpty,
+                      "MCP 인증 오류에 로그인 안내가 붙음")
+    }
+
+    /// 안내는 특정 CLI를 박지 않는다 — codex 실패에 "claude로 로그인"이 붙으면 틀린다.
+    func testHintDoesNotHardcodeSingleCLI() {
+        let hint = CLIProcessFailure.loginHint("Failed to authenticate: OAuth session expired")
+        XCTAssertTrue(hint.contains("codex"), "codex 경로에서도 맞는 안내여야 한다")
+    }
+
+    /// 진짜 CLI 로그인 만료에만 붙어야 한다.
+    func testRealSessionExpiryStillGetsHint() {
+        XCTAssertFalse(CLIProcessFailure.loginHint(
+            "Failed to authenticate: OAuth session expired and could not be refreshed").isEmpty)
+    }
+}

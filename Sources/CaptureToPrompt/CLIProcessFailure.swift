@@ -48,11 +48,17 @@ enum CLIProcessFailure {
     /// 무엇을 해야 할지 알 수 없다 (2026-09-16: OAuth session expired).
     static func loginHint(_ detail: String) -> String {
         let lowered = detail.lowercased()
-        let signs = ["authenticate", "oauth", "unauthorized", "login", "log in",
-                     "not logged in", "credentials"]
+        // MCP 서버 인증 실패는 CLI 로그인과 무관하다 — 여기 걸리면 엉뚱한 안내가 된다
+        let unrelated = ["authrequired", "rmcp::", "mcp.", "www_authenticate_header",
+                         "resource_metadata"]
+        guard !unrelated.contains(where: { lowered.contains($0) }) else { return "" }
+        // 광범위한 "authenticate"·"login" 대신 CLI가 실제로 쓰는 문구만 본다
+        let signs = ["session expired", "failed to authenticate", "please run /login",
+                     "not logged in", "please log in", "run `claude login`",
+                     "codex login", "unauthorized"]
         guard signs.contains(where: { lowered.contains($0) }) else { return "" }
-        return "\n→ 터미널에서 `claude` 를 한 번 실행해 로그인한 뒤 다시 시도하세요. "
-            + "(설정에서 Codex CLI나 API 키 백엔드로 바꿀 수도 있습니다)"
+        return "\n→ 로그인 세션이 만료되었습니다. 터미널에서 쓰고 계신 CLI"
+            + "(`claude` 또는 `codex`)를 한 번 실행해 로그인한 뒤 다시 시도하세요."
     }
 
     /// stderr에서 원인이 될 만한 줄만 추린다.
@@ -77,6 +83,16 @@ enum CLIProcessFailure {
     private static func isNoise(_ line: String) -> Bool {
         let lowered = line.lowercased()
         if lowered.hasPrefix("hook:") { return true }
+        // codex가 자기 MCP 서버·hook을 띄우며 뱉는 줄 — 우리 작업의 실패 원인이 아니다
+        // (2026-09-17: Railway MCP의 AuthRequired가 이미지 생성 실패 원인으로 표시됐다)
+        if lowered.contains("rmcp::") || lowered.contains("mcp::transport") { return true }
+        if lowered.contains("worker quit with fatal") { return true }
+        if lowered.hasPrefix("warning: clamping") || lowered.contains("hooks.json") {
+            return true
+        }
+        if lowered.contains("authrequired") || lowered.contains("www_authenticate_header") {
+            return true
+        }
         if lowered.hasPrefix("more principles") || lowered.hasPrefix("copy/paste specs") {
             return true
         }
