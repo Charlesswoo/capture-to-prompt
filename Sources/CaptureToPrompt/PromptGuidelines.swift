@@ -20,6 +20,39 @@ enum PromptGuidelines {
     the first two sentences of every prompt.
     """
 
+    /// 화면에 얹힌 것은 그림이 아니다 — 재현하면 원본에 없던 자막·HUD가 따라 들어온다.
+    static let exclusionRules = """
+    Describe only the artwork itself. Do NOT describe, and do not carry into the prompts, \
+    anything overlaid on top of it: subtitles and captions, watermarks and signatures, \
+    game HUD and status bars, health/mana meters, minimaps, menus, buttons, icons, \
+    cursors, timestamps, channel logos, platform chrome, window title bars, or any \
+    UI text. If such an element hides part of the artwork, describe what the artwork \
+    plainly shows and ignore the overlay. Text that is painted into the artwork itself \
+    (a sign in the scene, a title drawn as part of a cover) may be described, but never \
+    the interface around it.
+    """
+
+    /// 원본이 2D인데 생성본이 입체로 나오던 문제 (2026-09-17).
+    /// 실측: prompt_en 12건 중 6건이 "semi-realistic"을 썼고, 생성 모델은 그것을
+    /// 3D 렌더링 지시로 받아들인다. 차원을 첫 문장에 못 박고 모호한 말을 금지한다.
+    static let dimensionRules = """
+    State the dimensionality explicitly in the FIRST SENTENCE of every prompt. If the \
+    source is a flat drawing, say "flat 2D <medium>" and add "no 3D rendering, no \
+    photographic depth". If it is a 3D render or a photograph, say so just as plainly. \
+    Never use "semi-realistic", "realistic volume", "lifelike" or similar hedging words \
+    for a 2D drawing — image models read them as a request for 3D shading and the result \
+    stops looking like the original. Describe realistic anatomy or detailed shading with \
+    terms that stay inside the drawing ("carefully drawn proportions", "soft cel shadows").
+    """
+
+    /// 긴 프롬프트가 늘 필요하지는 않다 — 짧은 판도 함께 준다.
+    static let shortPromptRules = """
+    Also produce "prompt_short": one English sentence under 300 characters that would \
+    regenerate a recognisable version of this image. Lead with the dimensionality and \
+    drawing style, then the subject and the single most important detail. It must work \
+    on its own as a generation prompt — not a summary of the long one.
+    """
+
     static let styleRules = """
     Each prompt must OPEN with a short style clause (15-25 words) naming the drawing \
     style — line work, shading, color treatment, finish — and then continue with the \

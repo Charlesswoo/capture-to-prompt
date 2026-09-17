@@ -17,14 +17,16 @@ struct ResultPane: View {
         case korean = "한국어"
         case english = "English"
         case japanese = "日本語"
+        case short = "간략"
         case json = "JSON"
         var id: String { rawValue }
 
         /// JSON 탭은 파생 뷰이므로 편집 대상이 아니다.
+        /// 간략 프롬프트는 영어라 영어로 다룬다 — 고치면 나머지 언어도 그에 맞춰진다.
         var editableLanguage: PromptAnalysis.PromptLanguage? {
             switch self {
             case .korean: return .korean
-            case .english: return .english
+            case .english, .short: return .english
             case .japanese: return .japanese
             case .json: return nil
             }
@@ -297,7 +299,7 @@ struct ResultPane: View {
             }
             // 헤더: 언어 탭
             Picker("", selection: $selectedTab) {
-                ForEach(Tab.allCases) { tab in
+                ForEach(availableTabs) { tab in
                     if tab == .json {
                         Image(systemName: "curlybraces").tag(tab)
                             .help("JSON")
@@ -309,6 +311,9 @@ struct ResultPane: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .padding([.horizontal, .top])
+            .onChange(of: availableTabs) { _, tabs in
+                if !tabs.contains(selectedTab) { selectedTab = .korean }
+            }
 
             // 보고 있는 항목의 식별자 — 로그(history_id)와 대조할 때 쓴다.
             // 눌러서 전체 UUID를 복사한다 (짧은 ID는 읽기용).
@@ -715,11 +720,17 @@ struct ResultPane: View {
             .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
+    /// 예전 기록에는 간략 프롬프트가 없다 — 빈 탭을 보여주느니 감춘다.
+    private var availableTabs: [Tab] {
+        Tab.allCases.filter { $0 != .short || !(appState.analysis?.promptShort.isEmpty ?? true) }
+    }
+
     private func text(for analysis: PromptAnalysis) -> String {
         switch selectedTab {
         case .korean: return analysis.promptKo
         case .english: return analysis.promptEn
         case .japanese: return analysis.promptJa
+        case .short: return analysis.promptShort
         case .json: return analysis.prettyJSON()
         }
     }

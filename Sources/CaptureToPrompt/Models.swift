@@ -7,6 +7,8 @@ struct PromptAnalysis: Codable, Equatable {
     var promptJa: String
     /// 한눈에 이 그림을 알아보게 하는 3가지. 예전 기록에는 없어 빈 배열일 수 있다.
     var keyFeatures: [String]
+    /// 300자 이내 영어 한 문장 — 긴 프롬프트가 부담스러울 때 이것만으로도 생성된다.
+    var promptShort: String
     var breakdown: Breakdown
 
     struct Breakdown: Codable, Equatable {
@@ -60,15 +62,18 @@ struct PromptAnalysis: Codable, Equatable {
         case promptKo = "prompt_ko"
         case promptJa = "prompt_ja"
         case keyFeatures = "key_features"
+        case promptShort = "prompt_short"
         case breakdown
     }
 
     init(promptEn: String, promptKo: String, promptJa: String,
-         keyFeatures: [String] = [], breakdown: Breakdown) {
+         keyFeatures: [String] = [], promptShort: String = "",
+         breakdown: Breakdown) {
         self.promptEn = promptEn
         self.promptKo = promptKo
         self.promptJa = promptJa
         self.keyFeatures = keyFeatures
+        self.promptShort = promptShort
         self.breakdown = breakdown
     }
 
@@ -79,6 +84,7 @@ struct PromptAnalysis: Codable, Equatable {
         promptKo = try c.decode(String.self, forKey: .promptKo)
         promptJa = try c.decode(String.self, forKey: .promptJa)
         keyFeatures = try c.decodeIfPresent([String].self, forKey: .keyFeatures) ?? []
+        promptShort = try c.decodeIfPresent(String.self, forKey: .promptShort) ?? ""
         breakdown = try c.decode(Breakdown.self, forKey: .breakdown)
     }
 

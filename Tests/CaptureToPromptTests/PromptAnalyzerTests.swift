@@ -194,3 +194,29 @@ extension PromptAnalyzerTests {
         XCTAssertTrue(a.keyFeatures.isEmpty)
     }
 }
+
+// MARK: - prompt_short 디코딩 (2026-09-17)
+
+extension PromptAnalyzerTests {
+
+    func testDecodesShortPrompt() throws {
+        let json = """
+        {"prompt_en":"e","prompt_ko":"k","prompt_ja":"j","prompt_short":"a cat, cel shaded",
+         "breakdown":{"subject":"s","style":"s","composition":"c","lighting":"l",
+                      "color_palette":"p","mood":"m","medium":"d","tags":[]}}
+        """
+        let a = try JSONDecoder().decode(PromptAnalysis.self, from: Data(json.utf8))
+        XCTAssertEqual(a.promptShort, "a cat, cel shaded")
+    }
+
+    /// 예전 기록에는 없다 — 빈 문자열로 읽혀야 한다.
+    func testMissingShortPromptDecodesAsEmpty() throws {
+        let json = """
+        {"prompt_en":"e","prompt_ko":"k","prompt_ja":"j",
+         "breakdown":{"subject":"s","style":"s","composition":"c","lighting":"l",
+                      "color_palette":"p","mood":"m","medium":"d","tags":[]}}
+        """
+        let a = try JSONDecoder().decode(PromptAnalysis.self, from: Data(json.utf8))
+        XCTAssertTrue(a.promptShort.isEmpty)
+    }
+}

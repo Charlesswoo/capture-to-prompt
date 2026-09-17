@@ -1,5 +1,36 @@
 # TODO
 
+## UI 제외 · 2D 고정 · 간략 프롬프트 (2026-09-17 사용자 요청)
+
+### 1. 화면에 얹힌 것은 추출하지 않는다
+
+`exclusionRules` — 자막·워터마크·서명·게임 HUD·체력바·미니맵·메뉴·버튼·아이콘·
+커서·타임스탬프·채널 로고·창 타이틀바. 가려진 부분은 그림이 보이는 대로 쓰고
+오버레이는 무시한다. **그림에 그려진 글자**(장면 속 간판, 표지 제목)는 예외.
+
+### 2. 원본이 2D인데 생성본이 입체로 나오던 문제
+
+실측으로 원인을 찾았다 — `prompt_en` 12건 중 **6건이 "semi-realistic"**을 썼고,
+`delicate realistic volume` 같은 표현도 섞였다. 생성 모델은 이를 **3D 렌더링
+지시로 받아들인다.** 2D 신호(anime illustration, line work)가 있어도 함께 있으면
+입체 쪽으로 끌린다.
+
+`dimensionRules` — 차원을 **첫 문장에** 못 박는다. 평면이면
+`flat 2D <medium>` + `no 3D rendering, no photographic depth`.
+"semi-realistic"·"realistic volume"·"lifelike" 금지. 사실적 묘사가 필요하면
+그림 안에 머무는 표현으로(`carefully drawn proportions`, `soft cel shadows`).
+
+### 3. 간략 프롬프트
+
+`prompt_short` — 300자 이내 영어 한 문장. 요약이 아니라 **그것만으로 생성되는**
+프롬프트. 차원·화풍 먼저, 그다음 주제와 가장 중요한 디테일 하나.
+
+- [x] 백엔드 3종 + API 구조화 스키마 `required`
+- [x] 결과 패널에 **간략 탭** 추가 — 기존 생성 흐름(보고 있는 탭으로 생성)을
+      그대로 탄다. 예전 기록에는 없으므로 비어 있으면 탭을 감춘다
+- [x] `decodeIfPresent`로 기존 history.json 호환
+- [x] 테스트 248개 통과
+
 ## codex stderr 노이즈가 실패 원인으로 표시되던 문제 (2026-09-17 사용자 보고)
 
 이미지 생성 실패 메시지에 Railway MCP의 `AuthRequired`와 hook 경고가 실리고,

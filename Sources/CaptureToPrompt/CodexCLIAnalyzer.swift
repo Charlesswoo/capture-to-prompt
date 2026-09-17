@@ -16,9 +16,12 @@ struct CodexCLIAnalyzer {
     generation-ready prompt that would recreate the look of this image. \
     Respond with ONLY a raw JSON object (no markdown fences, no commentary) with \
     exactly these keys: prompt_en, prompt_ko, prompt_ja (image-generation prompts), \
-    key_features (array of exactly 3 short english strings), and breakdown \
+    key_features (array of exactly 3 short english strings), prompt_short (one short english sentence), and breakdown \
     (object with keys: subject, style, composition, lighting, color_palette, mood, \
     medium, tags (array of short lowercase english strings)). \
+    \(PromptGuidelines.exclusionRules)
+    \(PromptGuidelines.dimensionRules)
+    \(PromptGuidelines.shortPromptRules)
     \(PromptGuidelines.keyFeatureRules)
     \(PromptGuidelines.languageRules)
     \(PromptGuidelines.cameraRules)

@@ -162,3 +162,47 @@ extension PromptGuidelinesTests {
         XCTAssertNotNil(props?["key_features"])
     }
 }
+
+// MARK: - UI 제외 · 차원 고정 · 간략 프롬프트 (2026-09-17 사용자 요청)
+
+extension PromptGuidelinesTests {
+
+    /// 자막·HUD·워터마크는 그림이 아니라 화면에 얹힌 것 — 재현 대상이 아니다.
+    func testExclusionRulesCoverOverlays() {
+        let r = PromptGuidelines.exclusionRules.lowercased()
+        for sign in ["subtitle", "watermark", "hud", "timestamp", "button", "cursor"] {
+            XCTAssertTrue(r.contains(sign), "제외 대상 누락: \(sign)")
+        }
+        XCTAssertTrue(r.contains("do not describe") || r.contains("ignore"))
+    }
+
+    /// 원본이 2D인데 생성본이 입체로 나오던 원인 — "semi-realistic" 같은 표현이
+    /// 3D 렌더링 지시로 읽힌다. 차원을 첫 문장에 못 박게 한다.
+    func testDimensionRulesPinFlatnessAndBanAmbiguousWords() {
+        let r = PromptGuidelines.dimensionRules.lowercased()
+        XCTAssertTrue(r.contains("2d"))
+        XCTAssertTrue(r.contains("3d"))
+        // 모호한 표현을 쓰지 말라고 명시해야 한다
+        XCTAssertTrue(r.contains("semi-realistic"))
+        XCTAssertTrue(r.contains("first sentence"))
+    }
+
+    /// 간략 프롬프트는 길이 상한이 있어야 의미가 있다.
+    func testShortPromptRulesSetALimit() {
+        let r = PromptGuidelines.shortPromptRules
+        XCTAssertTrue(r.contains("prompt_short"))
+        XCTAssertTrue(r.lowercased().contains("characters") || r.contains("300"))
+    }
+
+    /// 세 백엔드가 같은 규칙을 받아야 한다.
+    func testAllBackendsCarryNewRules() {
+        for prompt in [ClaudeCLIAnalyzer.prompt(imageFileName: "a.png"),
+                       CodexCLIAnalyzer.prompt, PromptAnalyzer.systemPrompt] {
+            XCTAssertTrue(prompt.contains("prompt_short"), "간략 프롬프트 지시 누락")
+            XCTAssertTrue(prompt.lowercased().contains("watermark"), "제외 지시 누락")
+            XCTAssertTrue(prompt.lowercased().contains("semi-realistic"), "차원 지시 누락")
+        }
+        let props = PromptAnalyzer.outputSchema["properties"] as? [String: Any]
+        XCTAssertNotNil(props?["prompt_short"])
+    }
+}
