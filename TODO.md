@@ -12,8 +12,16 @@
 - [x] 기본값은 `gpt-image-2` 유지 (확인 안 된 ID로 바꾸면 전원 실패)
 - [x] 테스트 232개 통과
 
-codex 엔진은 모델을 고를 수 없다 — codex가 `gpt-image-2-codex`로 강제한다
-(openai/codex#28723, size·quality도 무시).
+### codex 엔진은 이미지 모델을 고를 수 없다 (2026-09-17 실측)
+
+codex-cli 0.154.0 기준:
+- `--model`은 **에이전트 모델**(gpt-5 계열)이고 이미지 모델이 아니다
+- `~/.codex/config.toml`에 이미지 관련 키 없음, `models_cache.json`에도 `gpt-image*` 없음
+- 내장 `image_generation`이 쓰는 모델은 서버가 정한다
+  (openai/codex#28723 기준 `gpt-image-2-codex`, size·quality도 무시)
+
+→ **2.5를 쓰려면 OpenAI 호환 Images API 엔진**을 고르는 수밖에 없다.
+   설정의 codex 엔진 설명에 이 문장을 넣었다.
 
 ## CLI 실패 원인이 사라지던 문제 (2026-09-16 다른 Mac 설치 후 보고)
 

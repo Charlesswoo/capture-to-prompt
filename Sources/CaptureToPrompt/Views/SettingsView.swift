@@ -169,6 +169,12 @@ struct SettingsView: View {
                               systemImage: "checkmark.circle")
                             .font(.caption)
                             .foregroundStyle(.green)
+                        // 2026-09-17 확인: codex의 --model은 에이전트 모델이고,
+                        // 내장 image_generation이 쓰는 이미지 모델은 고를 수 없다
+                        Text("이 엔진은 이미지 모델을 고를 수 없습니다 — codex가 정합니다. "
+                             + "gpt-image-2.5를 쓰려면 아래에서 OpenAI 호환 Images API를 고르세요.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     } else {
                         Label("codex CLI를 찾을 수 없습니다. brew install codex 또는 npm i -g @openai/codex 후 로그인하세요.",
                               systemImage: "exclamationmark.triangle")
