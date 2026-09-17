@@ -217,3 +217,26 @@ extension PromptGuidelinesTests {
         XCTAssertNotNil(props?["prompt_short"])
     }
 }
+
+// MARK: - 원본보다 사실적으로 적지 않기 (2026-09-17 원본·생성본 대조)
+
+extension PromptGuidelinesTests {
+
+    /// 실측: medium은 "Digital 2D anime illustration"인데 prompt_en 첫 문장은
+    /// "semi-realistic"이었다. 추출 안에서 어긋나고, 생성은 프롬프트를 따라간다.
+    func testFidelityRulesForbidUpgradingTheSource() {
+        let r = PromptGuidelines.fidelityRules.lowercased()
+        XCTAssertTrue(r.contains("medium"), "breakdown과 프롬프트를 맞추라는 지시가 없음")
+        XCTAssertTrue(r.contains("more realistic") || r.contains("upgrade"))
+        // 질감을 원본보다 자세히 적으면 실사 렌더링으로 넘어간다
+        XCTAssertTrue(r.contains("textur"))
+    }
+
+    func testAllBackendsCarryFidelityRules() {
+        for prompt in [ClaudeCLIAnalyzer.prompt(imageFileName: "a.png"),
+                       CodexCLIAnalyzer.prompt, PromptAnalyzer.systemPrompt] {
+            XCTAssertTrue(prompt.lowercased().contains("more realistic"),
+                          "충실도 지시 누락")
+        }
+    }
+}

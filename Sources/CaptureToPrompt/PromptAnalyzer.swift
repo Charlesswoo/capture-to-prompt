@@ -16,6 +16,7 @@ struct PromptAnalyzer {
     (English, Korean, Japanese). Also fill in the structured breakdown fields. \
     Keep tags short (1-3 words each, English, lowercase). \
     \(PromptGuidelines.exclusionRules)
+    \(PromptGuidelines.fidelityRules)
     \(PromptGuidelines.dimensionRules)
     \(PromptGuidelines.shortPromptRules)
     \(PromptGuidelines.keyFeatureRules)

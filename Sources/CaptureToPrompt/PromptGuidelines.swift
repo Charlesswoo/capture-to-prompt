@@ -35,6 +35,24 @@ enum PromptGuidelines {
     /// 원본이 2D인데 생성본이 입체로 나오던 문제 (2026-09-17).
     /// 실측: prompt_en 12건 중 6건이 "semi-realistic"을 썼고, 생성 모델은 그것을
     /// 3D 렌더링 지시로 받아들인다. 차원을 첫 문장에 못 박고 모호한 말을 금지한다.
+    /// 추출이 원본보다 사실적으로 적으면 생성은 그 프롬프트를 따라간다.
+    /// 실측(2026-09-17): 같은 항목에서 medium은 "Digital 2D anime illustration"인데
+    /// prompt_en 첫 문장은 "Polished semi-realistic anime illustration"이었다.
+    /// 원본은 선화가 뚜렷한 애니 그림인데 생성본은 선화가 사라지고 니트가 실제
+    /// 털실 질감으로, 피부가 실사급으로 렌더링됐다.
+    static let fidelityRules = """
+    Never describe the image as more realistic, more detailed or more polished than it \
+    actually is. The opening style clause of every prompt must agree with the "medium" \
+    field — if medium says a 2D anime illustration, the prompt may not open with \
+    "semi-realistic". Judge from what the drawing actually shows: visible outlines, flat \
+    or banded shading and stylised eyes mean a drawing, not a semi-realistic render.
+
+    Describe texture only to the level the source shows it. If a knit is drawn as simple \
+    ribbing, write "simple ribbed knit" — do not write about individual fibres; if skin \
+    is flat airbrushed colour, do not mention pores or subsurface detail. Inventing \
+    material detail is what pushes the result into photographic rendering.
+    """
+
     static let dimensionRules = """
     State the dimensionality explicitly in the FIRST SENTENCE of every prompt, whatever \
     it is. A flat drawing: "flat 2D <medium>", plus "no 3D rendering" when the style \
