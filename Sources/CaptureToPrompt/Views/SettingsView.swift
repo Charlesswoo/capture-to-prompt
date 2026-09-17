@@ -185,26 +185,28 @@ struct SettingsView: View {
                         TextField("모델", text: $imageGenModel,
                                   prompt: Text(ImageGenerator.defaultModel))
                             .autocorrectionDisabled()
-                        // 새 모델(gpt-image-2.5 등)이 나와도 앱에 ID를 박아두지 않도록
-                        // 키로 실제 목록을 가져와 고르게 한다
-                        if imageModels.isEmpty {
-                            Button(isLoadingModels ? "불러오는 중…" : "목록 불러오기") {
-                                loadImageModels()
-                            }
-                            .disabled(isLoadingModels || appState.resolvedImageGenKey.isEmpty)
-                        } else {
-                            Picker("", selection: $imageGenModel) {
-                                ForEach(imageModels, id: \.self) { Text($0).tag($0) }
-                            }
-                            .labelsHidden()
-                            .frame(maxWidth: 200)
+                        // 알려진 모델은 바로 고르고, '목록 불러오기'로 키에서 조회한
+                        // 것까지 합친다 (새 모델이 나와도 앱 수정 없이 잡힌다)
+                        Picker("", selection: $imageGenModel) {
+                            ForEach(ImageGenerator.mergedModels(fetched: imageModels),
+                                    id: \.self) { Text($0).tag($0) }
                         }
+                        .labelsHidden()
+                        .frame(maxWidth: 210)
+                        Button(isLoadingModels ? "불러오는 중…" : "목록 새로고침") {
+                            loadImageModels()
+                        }
+                        .disabled(isLoadingModels || appState.resolvedImageGenKey.isEmpty)
                     }
                     if let modelsError {
                         Text(modelsError)
                             .font(.caption)
                             .foregroundStyle(.orange)
                     }
+                    Text("gpt-image-2.5-flare가 기본입니다 — 빠르고 품질이 높습니다. "
+                         + "편집 정밀도가 중요하면 sunburst(느림)를 고르세요.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Text("OpenAI 호환 Images API — 키를 비우면 OPENAI_API_KEY 환경변수를 사용합니다.")
                         .font(.caption)
                         .foregroundStyle(.secondary)

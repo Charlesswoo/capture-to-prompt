@@ -216,3 +216,30 @@ extension ImageGeneratorTests {
         XCTAssertThrowsError(try ImageGenerator.parseModels(Data("nope".utf8)))
     }
 }
+
+// MARK: - 알려진 모델 (2026-09-17 공식 문서로 ID 확인)
+
+extension ImageGeneratorTests {
+
+    /// developers.openai.com/api/docs/models 에서 확인한 ID.
+    /// 목록 조회가 안 되는 환경(호환 API·네트워크 차단)에서도 고를 수 있어야 한다.
+    func testKnownModelsIncludeImages25() {
+        let known = ImageGenerator.knownModels
+        XCTAssertTrue(known.contains("gpt-image-2.5-flare"))
+        XCTAssertTrue(known.contains("gpt-image-2.5-sunburst"))
+        XCTAssertTrue(known.contains("gpt-image-2"), "이전 모델도 고를 수 있어야 한다")
+    }
+
+    /// 기본값은 Flare — 공식 문서 기준 gpt-image-2보다 품질이 높고 지연이 절반이다.
+    func testDefaultModelIsFlare() {
+        XCTAssertEqual(ImageGenerator.defaultModel, "gpt-image-2.5-flare")
+    }
+
+    /// 조회 결과와 알려진 목록을 합칠 때 중복이 생기면 Picker에 같은 줄이 두 번 뜬다.
+    func testMergedModelListHasNoDuplicates() {
+        let merged = ImageGenerator.mergedModels(fetched: ["gpt-image-2", "gpt-image-9"])
+        XCTAssertEqual(merged.count, Set(merged).count)
+        XCTAssertTrue(merged.contains("gpt-image-9"), "새로 나온 모델도 남아야 한다")
+        XCTAssertTrue(merged.contains("gpt-image-2.5-flare"))
+    }
+}

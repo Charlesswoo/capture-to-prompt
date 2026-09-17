@@ -4,7 +4,23 @@ import Foundation
 /// Base URL만 바꾸면 OpenAI 직결이든 호환 프록시든 동일하게 동작한다.
 struct ImageGenerator {
     static let defaultBaseURL = "https://api.openai.com/v1"
-    static let defaultModel = "gpt-image-2"
+    /// 기본 모델. 공식 문서(2026-09-08 출시) 기준 gpt-image-2보다 품질이 높고
+    /// 지연이 절반이라 기본값으로 둔다.
+    static let defaultModel = "gpt-image-2.5-flare"
+
+    /// 문서로 ID를 확인한 모델들 — 목록 조회가 안 되는 환경에서도 고를 수 있게.
+    /// (developers.openai.com/api/docs/models, 2026-09-17 확인)
+    static let knownModels = [
+        "gpt-image-2.5-flare",      // 기본. 빠르고 품질 높음
+        "gpt-image-2.5-sunburst",   // 편집 정밀도 우선, 생성이 느림
+        "gpt-image-2",
+    ]
+
+    /// 조회 결과와 알려진 목록을 합친다 (중복 없이, 알려진 것 먼저).
+    static func mergedModels(fetched: [String]) -> [String] {
+        var seen = Set<String>()
+        return (knownModels + fetched).filter { seen.insert($0).inserted }
+    }
 
     /// 오류 응답 — 정책 거부 판별에 code가 필요해 별도로 둔다 (message만 있는 프록시도 있다).
     struct ImageErrorEnvelope: Decodable {
